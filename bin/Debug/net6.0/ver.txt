@@ -1,0 +1,2 @@
+[VER_INFO]
+current_version=1.7

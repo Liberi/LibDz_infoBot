@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LibDz_infoBot": {
+      "commandName": "Project",
+      "remoteDebugEnabled": false
+    }
+  }
+}
