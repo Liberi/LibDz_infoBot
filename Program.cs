@@ -94,15 +94,18 @@ internal class Program
             globalFilePathWeekType = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "weekType.txt"), globalFilePathEditDzChatID = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "editDzChatID.txt");
         string EnglishDayNow = "Monday", EnglishDayThen = "Monday", EnglishDayYesterday = "Monday", RussianDayNow = "Понедельник", RussianDayThen = "Понедельник", RussianDayYesterday = "Понедельник", DateDayNow = "01.01", DateDayThen = "01.01", DateDayYesterday = "01.01";
 
-        /*string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        string projectDirectory = Directory.GetParent(baseDirectory).Parent.Parent.Parent.FullName;
-        string databaseFilePath = Path.Combine(projectDirectory, "Databases", "DatabaseTelegramBot.mdf");
-        AppDomain.CurrentDomain.SetData("DataDirectory", databaseFilePath);*/
-
-        //хотел получать путь через DataDirectory но это не совсем то, что нужно, теперь получаю путь как обычно через App.config возвращаясь на 3 директории назад
-
+        #region Подключение к БД
+        string databaseFilePath = Path.Combine(Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.Parent.FullName, "Databases"/*, "DatabaseTelegramBot.mdf"*/);
+        
         string connectionString = ConfigurationManager.ConnectionStrings["TelegramBotLibDB"].ConnectionString;
+
+        connectionString = connectionString.Replace("|DataDirectory|", databaseFilePath);
+
+        //хотел получать путь через DataDirectory с помощью AppDomain.CurrentDomain.SetData но оно не работает корректно,
+        //теперь получаю путь как обычно через App.config при этом получая путь возвращаясь на 3 директории назад и заменяя |DataDirectory| на нужный путь
+
         SqlConnection sqlConnection = new(connectionString);
+        #endregion
 
         var botClient = new TelegramBotClient(token);//подключение к боту по токену
         using CancellationTokenSource cts = new();
