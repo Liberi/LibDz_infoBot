@@ -11,7 +11,7 @@ namespace LibDz_infoBot
     {
         public static ReplyKeyboardMarkup MainMenu = new(new[] //любой пользователь
         {
-           new KeyboardButton[] { "🏠Текущее ДЗ" },//             <----                   <----                     !!!
+           new KeyboardButton[] { "🏠Текущее ДЗ" },
            new KeyboardButton[] { "🔰Еще...", "👨‍💻Администратор" },
         })
         { ResizeKeyboard = true };

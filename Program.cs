@@ -13,6 +13,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
 using System.Threading;
+using Telegram.Bot.Types.ReplyMarkups;
 
 internal class Program
 {
@@ -44,8 +45,8 @@ internal class Program
 
     private static async Task Main()
     {
-        //    6154384299:AAHkuqxMXNW3Chm2DG-EvOY6DWoxPtOzgOo
-        string token = "5645539273:AAFuIkDhTnFTQNvjBL1ocC9fb3BqmJPt4J0";
+        //    5645539273:AAFuIkDhTnFTQNvjBL1ocC9fb3BqmJPt4J0
+        string token = "6154384299:AAHkuqxMXNW3Chm2DG-EvOY6DWoxPtOzgOo";
         #region Основные переменные, массивы, параметры запуска и соединения     
         SpamDetector spamDetector = new();
         var greetings = new string[] { "добрый обед", "здарова", "на аппарате", "даров", "привет", "здравствуй", "здравствуйте", "хай", "добрый день", "добрый вечер",
@@ -88,15 +89,17 @@ internal class Program
             { "суббота", "Saturday" },
             { "воскресенье", "Sunday" }
         };
-        int globalMessageTextId = 0, globalMessagePhotoId = 0, globalNewsId = 0, globalNewsNumber = 0, globalDzInfo = 0, globalDzTextInfo = 0, globalDzChat = 0, globalTimerCountRestart = 0;//глобальные переменные, которые используются для разных действий во всем коде
-        long globalUserId = 0, globalChatId = 1545914098, globalBaseDzChat = -1001602210737  /*-1001797288636*/, globalAdminId = 1545914098;
+        int globalMessageTextId = 0, globalMessagePhotoId = 0, globalNewsId = 0, globalNewsNumber = 0, globalDzInfo = 0, globalDzTextInfo = 0, globalDzChat = 0, globalTimerCountRestart = 0, globalGroupChangeId = 0;//глобальные переменные, которые используются для разных действий во всем коде
+        long globalUserId = 0, globalChatId = 1545914098, globalBaseDzChat = /*-1001602210737*/  -1001797288636, globalAdminId = 1545914098;
         string globalUsername = "СтандартИмя", Exception = "ПУСТО", keyMenu = "MainMenu", weekType = "Числитель", globalTablePicture = "4 6 Null", //keyMenu переменная которая сохраняет меню в котором мы сейчас находимся (для кнопки назад)
-            globalFilePathWeekType = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "weekType.txt"), globalFilePathEditDzChatID = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "editDzChatID.txt");
+            globalFilePathWeekType = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "weekType.txt"), globalFilePathEditDzChatID = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "editDzChatID.txt"),
+            globalGroupName = "ИС1-21";
         string EnglishDayNow = "Monday", EnglishDayThen = "Monday", EnglishDayYesterday = "Monday", RussianDayNow = "Понедельник", RussianDayThen = "Понедельник", RussianDayYesterday = "Понедельник", DateDayNow = "01.01", DateDayThen = "01.01", DateDayYesterday = "01.01";
+        DateTime globalStartTime = DateTime.Now, globalChangeGroupTime = DateTime.Now.AddMinutes(-10);
 
         #region Подключение к БД
         string databaseFilePath = Path.Combine(Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.Parent.FullName, "Databases"/*, "DatabaseTelegramBot.mdf"*/);
-        
+
         string connectionString = ConfigurationManager.ConnectionStrings["TelegramBotLibDB"].ConnectionString;
 
         connectionString = connectionString.Replace("|DataDirectory|", databaseFilePath);
@@ -126,7 +129,7 @@ internal class Program
         var botName = await botClient.GetMeAsync();//запоминаем имя бота
         Console.ForegroundColor = ConsoleColor.Blue;
         Console.WriteLine($"[{DateTime.Now}] Запущен бот: @{botName.Username}");//информируем о запуске в консоль
-        await ReturnGlobalDzChat();
+        await ReturnGroupIdDzChat();
         await ReturnDayWeek(true);
         await WhatWeekType();
         Console.ForegroundColor = ConsoleColor.DarkBlue;
@@ -515,12 +518,12 @@ internal class Program
                 {
                     await AddUserToDatabase(globalUserId, globalUsername);
                     // Отправляем сообщение пользователю с вопросом на ввод группы
-                    await botClient.SendTextMessageAsync(globalChatId, "📝Вы добавлены в базу данных\\!\n✏️Для изменения группы введите /group _НазваниеГруппы_", replyMarkup: Keyboards.MainMenu, parseMode: ParseMode.MarkdownV2);
+                    await botClient.SendTextMessageAsync(globalChatId, "📝Вы добавлены в базу данных\\!\n✏️Для изменения группы введите /group", replyMarkup: Keyboards.MainMenu, parseMode: ParseMode.MarkdownV2);
                     //await UpdateIndexStatisticsAsync("Users");
                 }
                 else// Если userId нет в таблице, то добавляем данные
                 {
-                    await botClient.SendTextMessageAsync(globalChatId, "🤝*Мы уже с вами знакомы\\)*\n✏️Но если вы хотите изменить группу введите /group _НазваниеГруппы_", replyMarkup: Keyboards.MainMenu, parseMode: ParseMode.MarkdownV2);
+                    await botClient.SendTextMessageAsync(globalChatId, "🤝*Мы уже с вами знакомы\\)*\n✏️Но если вы хотите изменить группу введите /group", replyMarkup: Keyboards.MainMenu, parseMode: ParseMode.MarkdownV2);
 
                     if (globalUsername != "СтандартИмя")
                     {
@@ -567,6 +570,7 @@ internal class Program
                 "`\\[1002\\]` ➱ Неподдерживаемый формат файла;\r\n" +
                 "`\\[1003\\]` ➱ Проблемы с локализацией дней недели;\r\n" +
                 "`\\[1004\\]` ➱ Ошибка в выполнении инструкции Regex;\r\n" +
+                "`\\[1005\\]` ➱ Выполнение команды до истечения заданного промежутку времени;\r\n" +
                 "\r\n" +
                 "`\\[2001\\]` ➱ Ошибка работы сети;\r\n" +
                 "`\\[2002\\]` ➱ Ошибка в использовании Id пользователя;\r\n" +
@@ -583,30 +587,16 @@ internal class Program
             }
             #endregion
             #region /group 
-            if (message.Text.Trim().ToLower() == "/group" || Regex.IsMatch(message.Text.Trim().ToLower(), "/group"))//команда для изменения группы
-            {//проверяем с помощью Regex т.к мы вводим /group НазваниеГруппы
-                string userGroup = message.Text;// Получаем значение группы из сообщения
-                if (userGroup.Trim() == "/group" || userGroup.Split(' ')[0].Trim() != "/group" || userGroup.Split(' ').Length > 2)//проверяю правильно ли ввели группу, и что 0 элемент = команде, так-же проверяю параметр массива
+            if (message.Text.Trim().ToLower() == "/group" /*|| Regex.IsMatch(message.Text.Trim().ToLower(), "/group")*/)//команда для изменения группы
+            {
+                TimeSpan elapsedTime = DateTime.Now - globalChangeGroupTime;
+                if (elapsedTime.TotalMinutes > 10)
                 {
-                    await botClient.SendTextMessageAsync(globalChatId, "❌Ошибка \\[3001\\]: *Вы вели группу некорректно*\nДля изменения группы введите /group _НазваниеГруппы_ *_\\(НазваниеГруппы без пробелов\\)_* ", parseMode: ParseMode.MarkdownV2);
+                    await ChangeGroup();
                 }
                 else
                 {
-                    userGroup = userGroup.Split(' ')[1].Trim();//беру 1 элемент как название группы
-                    if (userGroup == null || userGroup == String.Empty)//проверяю что не пустое
-                    {
-                        await botClient.SendTextMessageAsync(globalChatId, "❌Ошибка \\[4002\\]: *Вы вели группу некорректно*\nДля изменения группы введите /group _НазваниеГруппы_", parseMode: ParseMode.MarkdownV2);
-                    }
-                    else
-                    {
-                        sqlConnection.Open();
-                        SqlCommand updateCommand = new("UPDATE Users SET user_group = @userGroup WHERE user_id = @userId", sqlConnection);
-                        updateCommand.Parameters.AddWithValue("@userId", globalUserId);
-                        updateCommand.Parameters.AddWithValue("@userGroup", userGroup);
-                        updateCommand.ExecuteNonQuery();
-                        sqlConnection.Close();
-                        await botClient.SendTextMessageAsync(globalChatId, $"✅*Группа успешно изменена\\!*\nТеперь ваша группа {await EscapeMarkdownV2(userGroup)}", parseMode: ParseMode.MarkdownV2);
-                    }
+                    await botClient.SendTextMessageAsync(chatId: globalChatId, text: "❌Ошибка [1005]: Группу можно сменить только раз в 10 минут!");
                 }
                 return;
             }
@@ -625,7 +615,7 @@ internal class Program
 
                     await AddUserToDatabase(globalUserId, globalUsername);
 
-                    await botClient.SendTextMessageAsync(globalChatId, $"✅Пользователь *{await EscapeMarkdownV2(globalUsername)}* успешно зарегистрирован в базе данных\\.\n✏️Для изменения группы введите /group _НазваниеГруппы_", parseMode: ParseMode.MarkdownV2);
+                    await botClient.SendTextMessageAsync(globalChatId, $"✅Пользователь *{await EscapeMarkdownV2(globalUsername)}* успешно зарегистрирован в базе данных\\.\n✏️Для изменения группы введите /group", parseMode: ParseMode.MarkdownV2);
 
                     var messageRes = await botClient.SendTextMessageAsync(globalChatId, await userProfile(globalUserId), replyMarkup: Keyboards.Profile, parseMode: ParseMode.MarkdownV2);//если есть то выводим данные
                     globalMessageTextId = messageRes.MessageId; // сохраняем идентификатор сообщения если будет менять имя или группу
@@ -722,6 +712,23 @@ internal class Program
                 {
                     await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы не являетесь админом [3002]+[4003]");
                 }
+                return;
+            }
+            #endregion
+            #region /not_send_dz
+            if (message.Text.Trim().ToLower() == "/not_send_dz")//обновление типа недели
+            {
+                /*if (await dataAvailability(globalUserId, "Admins"))//проверка что ты являешься админом
+                {
+                    weekType = weekType == "Числитель" ? "Знаменатель" : "Числитель";
+                    System.IO.File.WriteAllText(globalFilePathWeekType, weekType);
+                    await botClient.SendTextMessageAsync(globalChatId, $"✅Теперь тип недели: *{weekType}*", parseMode: ParseMode.Markdown);
+                    await DzChat(true);
+                }
+                else
+                {
+                    await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы не являетесь админом [3002]+[4003]");
+                }*/
                 return;
             }
             #endregion
@@ -2020,7 +2027,7 @@ internal class Program
             #endregion
 
             #region Изменения группы
-            if (pressingButtons["changeGroupFT"] && message.Text.Trim().ToLower() != "/cancel")//изменение группы через кнопку
+            /*if (pressingButtons["changeGroupFT"] && message.Text.Trim().ToLower() != "/cancel")//изменение группы через кнопку
             {
                 sqlConnection.Close();
                 string userGroup = message.Text.Trim();
@@ -2050,7 +2057,7 @@ internal class Program
                 }
                 pressingButtons["changeGroupFT"] = false;
                 return;
-            }
+            }*/
             #endregion
             #region Изменения имени
             if (pressingButtons["changeNameFT"] && message.Text.Trim().ToLower() != "/cancel")//изменение имени через кнопку
@@ -3257,6 +3264,31 @@ internal class Program
             {
                 await Cancel();
             }
+            else if (callbackData.Split(' ')[0].Trim() == "Group")
+            {
+                if (globalGroupChangeId != 0)
+                {
+                    await botClient.DeleteMessageAsync(globalChatId, globalGroupChangeId);
+                }
+                string userGroup = callbackData.Split(' ')[1].Trim();
+                sqlConnection.Close();
+                sqlConnection.Open();
+                SqlCommand updateCommand = new("UPDATE Users SET user_group = @userGroup WHERE user_id = @userId", sqlConnection);
+                updateCommand.Parameters.AddWithValue("@userId", globalUserId);
+                updateCommand.Parameters.AddWithValue("@userGroup", userGroup);
+                updateCommand.ExecuteNonQuery();
+                sqlConnection.Close();
+                await botClient.SendTextMessageAsync(globalChatId, $"✅*Группа успешно изменена\\!*\nТеперь ваша группа {await EscapeMarkdownV2(userGroup)}", parseMode: ParseMode.MarkdownV2);
+                globalChangeGroupTime = DateTime.Now;
+                try
+                {
+                    if (globalMessageTextId != 0)//проверка, можно ли отредактировать сообщение
+                    {
+                        await botClient.EditMessageTextAsync(globalChatId, globalMessageTextId, await userProfile(globalUserId), replyMarkup: Keyboards.Profile, parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                    }
+                }
+                catch { }
+            }
             else
             {
                 if (await buttonTest())//проверяем все ли действия выполнены т.е все ли кнопки в массиве false
@@ -3265,8 +3297,16 @@ internal class Program
                     {
                         case "updateGroup":
                             // Обрабатываем нажатие на кнопку "Изменить группу"
-                            await botClient.SendTextMessageAsync(globalChatId, "👥Выберите новую группу:", replyMarkup: Keyboards.cancel);
-                            pressingButtons["changeGroupFT"] = true;
+                            TimeSpan elapsedTime = DateTime.Now - globalChangeGroupTime;
+                            if (elapsedTime.TotalMinutes > 10)
+                            {
+                                await ChangeGroup();
+                            }
+                            else
+                            {
+                                await botClient.SendTextMessageAsync(chatId: globalChatId, text: "❌Ошибка [1005]: Группу можно сменить только раз в 10 минут!");
+                            }
+                            return;
                             break;
                         case "updateName":
                             // Обрабатываем нажатие на кнопку "Изменить имя"
@@ -3803,7 +3843,7 @@ internal class Program
 
                                         if (await ReturnDayWeek(true))
                                         {
-                                            await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [1003]", replyMarkup: Keyboards.cancel);                                         
+                                            await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [1003]", replyMarkup: Keyboards.cancel);
                                             graphics.Dispose();// Освободите ресурсы
                                             image.Dispose();
                                             return;
@@ -3970,9 +4010,9 @@ internal class Program
                                 graphics.Dispose();
                                 image.Dispose();
 
+#pragma warning restore CA1416 // Проверка совместимости платформы
                             }
                             break;
-#pragma warning restore CA1416 // Проверка совместимости платформы
                         default:
                             // Обрабатываем неизвестные данные обратного вызова
                             await botClient.SendTextMessageAsync(globalChatId, "🚫Незарегистрированная кнопка [1300]");
@@ -4042,6 +4082,11 @@ internal class Program
                     break;
                 case "Schedule ?":
                     selectCommand = new SqlCommand($"select count(*) from {value}_Schedule", sqlConnection);
+                    break;
+                case "GroupName ?":
+                    selectCommand = new SqlCommand("SELECT * FROM Users WHERE user_id = @userId AND user_group = @userGroup", sqlConnection);
+                    selectCommand.Parameters.AddWithValue("@userId", ID);
+                    selectCommand.Parameters.AddWithValue("@userGroup", value);
                     break;
                 default:
                     selectCommand = new SqlCommand($"SELECT * FROM {table} WHERE user_id = @userId", sqlConnection);
@@ -4545,12 +4590,12 @@ internal class Program
 
             if (await ReturnDayWeek(true))
             {
-                await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка при отправки дз [1003]", replyMarkup: Keyboards.cancel);              
+                await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка при отправки дз [1003]", replyMarkup: Keyboards.cancel);
                 graphics.Dispose();// Освободите ресурсы
                 image.Dispose();
                 return "ОШИБКА";
             }
-            
+
 
             if (await dataAvailability(0, "Homework ?", EnglishDayThen))//проверяю есть ли вообще дз в базе
             {
@@ -4688,7 +4733,7 @@ internal class Program
 
                 if (EditMessage)
                 {
-                    await ReturnGlobalDzChat();
+                    await ReturnGroupIdDzChat();
 
                     if (globalDzChat != 0)
                     {
@@ -4939,10 +4984,10 @@ internal class Program
             await sqlConnection.CloseAsync();
         }
 
-        async Task CopyDataDz(string DayName)
+        async Task CopyDataDz(string DayName, string groupName)
         {//копирование расписания из таблицы расписания в дз по дню недели
             sqlConnection.Close();
-            await ReturnGlobalDzChat();
+            await ReturnGroupIdDzChat();
             if (globalDzChat == 0)
             {
                 //обнуляю что-бы не редактировать старое сообщение новым дз
@@ -4978,7 +5023,7 @@ internal class Program
                 Console.WriteLine($"[{DateTime.Now}] Пользователь {globalChatId} отправлял слишком много сообщений в короткое время!");
                 Console.ResetColor();
                 await UpdateUserStatusAsync(globalUserId, true);//блокируем пользователя
-                await botClient.SendTextMessageAsync(chatId: globalChatId, text: "❌Ошибка [0000]: Вы заблокированы за спам...");
+                await botClient.SendTextMessageAsync(chatId: globalChatId, text: "❌Ошибка [1005]: Вы заблокированы за спам...");
                 await botClient.SendTextMessageAsync(chatId: globalAdminId, text: $"🛑Пользователь {globalUserId} заблокирован за спам🛑");
                 return true;
             }
@@ -5040,86 +5085,86 @@ internal class Program
             }
         }
 
-        async Task ReturnGlobalDzChat()
+        async Task ReturnGroupIdDzChat(string groupName)
         {
-            string ErrorMessage = "НЕТоШИБКИ";
+            string ErrorMessageID = "НЕТоШИБКИ";
+            DateTime timeMessage;
+            int idMessage;
             // Чтение данных из файла
-            if (System.IO.File.Exists(globalFilePathEditDzChatID))
+            if (await ReturnGroupName())
             {
-                string fileContent = await System.IO.File.ReadAllTextAsync(globalFilePathEditDzChatID);
+                /*string fileContent = await System.IO.File.ReadAllTextAsync(globalFilePathEditDzChatID);
 
                 // Разделение содержимого файла на части: текст сообщения и дату/время
-                string[] parts = fileContent.Split("☰");
-                if (parts.Length == 2)
+                string[] parts = fileContent.Split("☰");*/
+
+                sqlConnection.Open();
+                SqlCommand command = new("SELECT * FROM Groups WHERE group_Name = @groupName", sqlConnection);
+                command.Parameters.AddWithValue("@groupName", groupName);
+                using (SqlDataReader reader = command.ExecuteReader())
                 {
-                    string message = parts[0].Trim();
-                    string timeString = parts[1].Trim();
+                    idMessage = (int)reader["id_Message_DZ"];
+                    timeMessage = reader.GetDateTime(reader.GetOrdinal("update_time"));
+                }
+                sqlConnection.Close();
 
-                    if (int.Parse(message) != 0)
+                if (idMessage != 0)
+                {
+                    /*// Парсинг времени из строки
+                    if (DateTime.TryParse(timeMessage, out DateTime messageTime))
+                    {*/
+                    //DateTime nextDay = messageTime.AddDays(1).AddHours(-(messageTime.Hour - 10));
+
+                    // Вычисление времени на следующий день и 10:00
+                    DateTime nextDay = timeMessage.AddDays(1).AddHours(-(timeMessage.Hour - 10));
+
+                    // Проверка времени
+                    if (DateTime.Now <= nextDay)
                     {
-                        // Парсинг времени из строки
-                        if (DateTime.TryParse(timeString, out DateTime messageTime))
-                        {
-                            // Вычисление времени на следующий день и 10:00
-                            DateTime nextDay = messageTime.AddDays(1).AddHours(-(messageTime.Hour - 10));
-
-                            // Получение текущего дня и времени
-                            DateTime currentDateTime = DateTime.Now;
-
-                            // Проверка времени
-                            if (currentDateTime <= nextDay)
-                            {
-                                // Время не превышено, присваиваем значение из файла
-                                globalDzChat = int.Parse(message);
-                            }
-                            else
-                            {
-                                // Время превышено, присваиваем значение 0
-                                globalDzChat = 0;
-                                ErrorMessage = "Время действия фила превышено";
-                            }
-                        }
-                        else
-                        {
-                            // Ошибка при парсинге времени
-                            globalDzChat = 0;
-                            ErrorMessage = "Ошибка при парсинге времени";
-                        }
+                        // Время не превышено, присваиваем значение из файла
+                        globalDzChat = idMessage;
                     }
                     else
                     {
-                        // Обнуленное ID
+                        // Время превышено, присваиваем значение 0
                         globalDzChat = 0;
-                        ErrorMessage = "Ошибка 0";
+                        ErrorMessageID = "Время действия фила превышено";
                     }
+                    /*}
+                    else
+                    {
+                        // Ошибка при парсинге времени
+                        globalDzChat = 0;
+                        ErrorMessageID = "Ошибка при парсинге времени";
+                    }*/
                 }
                 else
                 {
-                    // Некорректный формат файла
+                    // Обнуленное ID
                     globalDzChat = 0;
-                    ErrorMessage = "Некорректный формат файла";
+                    ErrorMessageID = "Ошибка 0";
                 }
             }
             else
             {
                 // Файл не существует
                 globalDzChat = 0;
-                ErrorMessage = "Файл не существует";
+                ErrorMessageID = "Ваша группа не существует";
             }
 
             if (globalDzChat == 0)
             {
-                if (ErrorMessage == "Время действия фила превышено")
+                if (ErrorMessageID == "Время действия фила превышено")
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine($"[{DateTime.Now}] Время действия фила \"globalDzChat\" превышено, назначено значение 0");
                     Console.ResetColor();
                 }
-                else if (ErrorMessage != "Ошибка 0" && ErrorMessage != "НЕТоШИБКИ")
+                else if (ErrorMessageID != "Ошибка 0" && ErrorMessageID != "НЕТоШИБКИ")
                 {
-                    await botClient.SendTextMessageAsync(globalChatId, $"*❌Ошибка при получении редактируемого ID сообщения [1100]:* {ErrorMessage}", parseMode: ParseMode.MarkdownV2);
+                    await botClient.SendTextMessageAsync(globalChatId, $"*❌Ошибка при получении редактируемого ID сообщения [1100]:* _{ErrorMessageID}_", parseMode: ParseMode.MarkdownV2);
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"[{DateTime.Now}] Ошибка при получении редактируемого ID сообщения: {ErrorMessage}");
+                    Console.WriteLine($"[{DateTime.Now}] Ошибка при получении редактируемого ID сообщения: {ErrorMessageID}");
                     Console.ResetColor();
                 }
             }
@@ -5141,8 +5186,8 @@ internal class Program
                 && weekDays.TryGetValue(RussianDayThen, out EnglishDayThen)
                 && weekDays.TryGetValue(RussianDayYesterday, out EnglishDayYesterday)))
             {//проверяем является ли слово днем недели и если да, записываем в переменную анг версию
-                if (weekDays.ContainsValue(RussianDayNow) 
-                    && weekDays.ContainsValue(RussianDayThen) 
+                if (weekDays.ContainsValue(RussianDayNow)
+                    && weekDays.ContainsValue(RussianDayThen)
                     && weekDays.ContainsValue(RussianDayYesterday))
                 {
                     EnglishDayNow = RussianDayNow;
@@ -5173,6 +5218,62 @@ internal class Program
             return Exception;
         }
 
+        async Task<bool> ReturnGroupName()
+        {
+            if (!await dataAvailability(globalUserId, "GroupName ?", globalGroupName))
+            {
+                sqlConnection.Open();
+                SqlCommand command = new("SELECT user_group FROM Users WHERE user_id = @UserId", sqlConnection);
+                command.Parameters.AddWithValue("@UserId", globalUserId);
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    globalGroupName = (string)reader["user_group"];
+                }
+                sqlConnection.Close();
+            }
+            if (globalGroupName == "НетГруппы")
+            {
+                await botClient.SendTextMessageAsync(globalChatId, $"*⚠️У вас все еще не выбрана группа, она необходима для выполнения этого действия*\n" +
+                    $"ℹ️_Измените группу в профиле или введите команду_ /group",
+                    parseMode: ParseMode.MarkdownV2);
+                return false;
+            }
+            return true;
+        }
+        async Task ChangeGroup()
+        {
+            //списки для хранения названий групп и инлайн кнопок
+            List<string> groupNames = new List<string>();
+            List<InlineKeyboardButton[]> inlineButtonRows = new List<InlineKeyboardButton[]>();
+
+            sqlConnection.Close();
+            await sqlConnection.OpenAsync();
+            //запрос к базе данных для получения данных из столбца "group_Name"
+            SqlCommand command = new SqlCommand("SELECT group_Name FROM Groups", sqlConnection);
+            using (SqlDataReader reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    // значения из SqlDataReader и добавим их в списки
+                    string groupName = reader.GetString(reader.GetOrdinal("group_Name"));
+                    groupNames.Add(groupName);
+
+                    // Создадим инлайн кнопку с использованием названия группы и добавьте ее в текущую строку кнопок
+                    InlineKeyboardButton[] inlineButtonRow = new InlineKeyboardButton[]
+                    {
+                            InlineKeyboardButton.WithCallbackData(text: groupName, callbackData: $"Group {groupName}")
+                    };
+                    inlineButtonRows.Add(inlineButtonRow);
+                }
+            }
+            await sqlConnection.CloseAsync();
+            // Создадим объект InlineKeyboardMarkup с использованием списков названий групп и инлайн кнопок
+            InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup(inlineButtonRows.ToArray());
+
+            var mess = await botClient.SendTextMessageAsync(globalChatId, "*❕Выберите свою группу 👥:*", parseMode: ParseMode.MarkdownV2, replyMarkup: inlineKeyboardMarkup);
+            globalGroupChangeId = mess.MessageId;
+        }
+
         async Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)//любые возможные ошибки
         {
             var ErrorMessage = exception switch
@@ -5191,6 +5292,15 @@ internal class Program
                     {
                         await botClient.SendTextMessageAsync(globalAdminId, $"❗️Бот был перезапущен❗️");
                     }
+                    else if (ErrorMessage.Contains("[409]") && ErrorMessage.Contains("make sure that only one bot instance is running"))
+                    {
+                        TimeSpan elapsedTime = DateTime.Now - globalStartTime;
+                        if (elapsedTime.TotalSeconds < 10)
+                        {
+                            Environment.Exit(1); //Если было запущенно сразу 2 бота, то тот, кто был запущен позже и время запуска меньше 10 сек завершит свою работу
+                        }
+                        await botClient.SendTextMessageAsync(globalAdminId, $"❗️Было запущенно 2 бота сразу,\n 2-ой прекратил свою работу❗️");
+                    }
                     else
                     {
                         await botClient.SendTextMessageAsync(globalAdminId, $"Ошибка:\n{ErrorMessage}");
@@ -5204,10 +5314,19 @@ internal class Program
                     {
                         await botClient.SendTextMessageAsync(globalAdminId, $"❗️Бот был перезапущен❗️");
                     }
+                    else if (ErrorMessage.Contains("[409]") && ErrorMessage.Contains("make sure that only one bot instance is running"))
+                    {
+                        TimeSpan elapsedTime = DateTime.Now - globalStartTime;
+                        if (elapsedTime.TotalSeconds < 10)
+                        {
+                            Environment.Exit(1); //Если было запущенно сразу 2 бота, то тот, кто был запущен позже и время запуска меньше 10 сек завершит свою работу
+                        }
+                        await botClient.SendTextMessageAsync(globalAdminId, $"❗️Было запущенно 2 бота сразу,\n 2-ой прекратил свою работу❗️");
+                    }
                     else
                     {
                         await botClient.SendTextMessageAsync(globalChatId, $"❌🛑❌Вы сломали бота(((\n" +
-                            $"❗️Всем пользователям будет выдано ограничение на его использование❗️\n" +
+                            $"❗️Вероятно всем пользователям будет выдано ограничение на его использование❗️\n" +
                             $"🛠На исправление уже направлены все силы, это займет како-то время..." +
                             $"\n\n" +
                             $"Ошибка:\n{ErrorMessage}");
@@ -5227,7 +5346,7 @@ internal class Program
                         }
                         sqlConnection.Close();
                         await botClient.SendTextMessageAsync(globalAdminId, $"❌🛑❌Поломка бота!\n" +
-                            $"У пользователя {globalChatId}, вероятное имя @{Username}, время поломки {DateTime.Now}. Последнее отправленное действие: {Exception}" +
+                            $"У пользователя {globalChatId}, вероятное имя @{Username} , время поломки {DateTime.Now}. Последнее отправленное действие: {Exception}" +
                             $"\n\n" +
                             $"Ошибка:\n{ErrorMessage}");
                     }
