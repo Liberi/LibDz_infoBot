@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Telegram.Bot.Types.ReplyMarkups;
+﻿using Telegram.Bot.Types.ReplyMarkups;
 
 namespace LibDz_infoBot
 {
@@ -22,7 +17,7 @@ namespace LibDz_infoBot
             new KeyboardButton[] { "🗓Расписания", "◀️Назад" },
         })
         { ResizeKeyboard = true };
-            
+
         public static ReplyKeyboardMarkup schedules = new(new[] //любой пользователь
         {
             new KeyboardButton[] { "📆На завтра", "🗓На всю неделю" },
@@ -63,7 +58,7 @@ namespace LibDz_infoBot
         })
         { ResizeKeyboard = true };
 
-        public static ReplyKeyboardMarkup administratorManagement = new (new[] // мин уровень допуска адм2 или выше
+        public static ReplyKeyboardMarkup administratorManagement = new(new[] // мин уровень допуска адм2 или выше
         {
             new KeyboardButton[] { "➕Добавить Админа", "🗑Удалить Админа" },
             new KeyboardButton[] { "◀️Назад" },
@@ -92,7 +87,7 @@ namespace LibDz_infoBot
         })
         { ResizeKeyboard = true };
 
-        public static ReplyKeyboardMarkup lockUnlockUsers = new (new[] // мин уровень допуска адм1
+        public static ReplyKeyboardMarkup lockUnlockUsers = new(new[] // мин уровень допуска адм1
         {
             new KeyboardButton[] { "🔐Заблокировать", "🔓Разблокировать" },
             new KeyboardButton[] { "◀️Назад" },
@@ -141,7 +136,7 @@ namespace LibDz_infoBot
         });
 
 
-        public static InlineKeyboardMarkup newsButton = new (new[]
+        public static InlineKeyboardMarkup newsButton = new(new[]
         {
             new []
             {
@@ -150,7 +145,7 @@ namespace LibDz_infoBot
             },
         });
 
-        public static InlineKeyboardMarkup addPicture = new (new[]
+        public static InlineKeyboardMarkup addPicture = new(new[]
         {
             new []
             {
@@ -176,7 +171,7 @@ namespace LibDz_infoBot
             },
         });
 
-        public static InlineKeyboardMarkup shutdownBot = new (new[]
+        public static InlineKeyboardMarkup shutdownBot = new(new[]
         {
             new []
             {
