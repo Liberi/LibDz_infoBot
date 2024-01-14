@@ -88,13 +88,13 @@ internal class Program
             { "суббота", "Saturday" },
             { "воскресенье", "Sunday" }
         };
-        int a = 0;
         int globalMessageTextId = 0, globalMessagePhotoId = 0, globalNewsId = 0, globalNewsNumber = 0, globalDzInfo = 0, globalDzTextInfo = 0, globalIdEditMessage = 0, globalTimerCountRestart = 0, globalGroupChangeId = 0;//глобальные переменные, которые используются для разных действий во всем коде
         long globalUserId = 0, globalChatId = 1545914098, globalIdBaseChat = /*-1001602210737*/  -1001797288636, globalAdminId = 1545914098;
         string globalUsername = "СтандартИмя", Exception = "ПУСТО", globalKeyMenu = "MainMenu", weekType = "Числитель", globalTablePicture = "4 6 Null", //keyMenu переменная которая сохраняет меню в котором мы сейчас находимся (для кнопки назад)
             globalFilePathWeekType = Path.Combine(Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.Parent.FullName, "Databases", "weekType.txt"), globalGroupName = "ИС1-21";
         string EnglishDayNow = "Monday", EnglishDayThen = "Monday", EnglishDayYesterday = "Monday", RussianDayNow = "Понедельник", RussianDayThen = "Понедельник", RussianDayYesterday = "Понедельник", DateDayNow = "01.01", DateDayThen = "01.01", DateDayYesterday = "01.01";
         DateTime globalStartTime = DateTime.Now, globalChangeGroupTime = DateTime.Now.AddMinutes(-10);
+        spamDetector.StartTime = globalStartTime;
 
         #region Подключение к БД
         string databaseFilePath = Path.Combine(Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.Parent.FullName, "Databases"/*, "DatabaseTelegramBot.mdf"*/);
@@ -589,7 +589,7 @@ internal class Program
             if (message.Text.Trim().ToLower() == "/group" /*|| Regex.IsMatch(message.Text.Trim().ToLower(), "/group")*/)//команда для изменения группы
             {
                 TimeSpan elapsedTime = DateTime.Now - globalChangeGroupTime;
-                if (elapsedTime.TotalMinutes > 10)
+                if (elapsedTime.TotalMinutes > 10 || await dataAvailability(globalUserId, "Admins 1"))
                 {
                     await ChangeGroup();
                 }
@@ -1193,34 +1193,69 @@ internal class Program
             #region Кнопка До конца пары
             if (message.Text.Trim() == "⏱До конца пары")
             {
+                if (!await ReturnGroupName())
+                {
+                    return;
+                }
                 if (await dataAvailability(0, "Calls ?"))//проверяем есть ли вообще звонки в базе
                 {
-                    string[] schedule = Array.Empty<string>();
+                    string EnglishDay = "";
+                    int maxCalls = 0;
+                    if (!weekDays.TryGetValue(DateTime.Today.ToString("dddd"), out EnglishDay))
+                    {
+                        EnglishDay = DateTime.Today.ToString("dddd");
+                        if (weekDays.Values.ToList().IndexOf(EnglishDay) == -1)
+                        {
+                            await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [1003]", replyMarkup: Keyboards.cancel);
+                            return;
+                        }
+                    }
 
+                    sqlConnection.Open();
+                    SqlCommand commandSch = new($"SELECT TOP(1) PERCENT Id_lesson FROM [{globalGroupName}_{EnglishDay}_Schedule] ORDER BY Id_lesson DESC", sqlConnection);
+                    SqlDataReader readerSch = commandSch.ExecuteReader();
+                    if (readerSch.Read())
+                    {
+                        if (!readerSch.IsDBNull(readerSch.GetOrdinal("Id_lesson")))
+                        {
+                            maxCalls = (int)readerSch["Id_lesson"];
+                        }
+                    }
+                    sqlConnection.Close();
+
+                    if (maxCalls == 0)
+                    {
+                        await botClient.SendTextMessageAsync(globalChatId, $"⏲По расписанию у вашей группы сегодня _нет ❌_ пар \\[3002\\]", parseMode: ParseMode.MarkdownV2);
+                        return;
+                    }
+
+                    string[] schedule = Array.Empty<string>();
                     using (SqlConnection connection = new(connectionString))
                     {
                         await connection.OpenAsync();
-
-                        string query = "SELECT time_interval FROM Calls ORDER BY lesson_number";
-                        SqlCommand command = new(query, connection);
+                        SqlCommand command = new("SELECT time_interval FROM Calls ORDER BY lesson_number", connection);
                         SqlDataReader reader = await command.ExecuteReaderAsync();
 
+                        int countCalls = 0;
                         while (await reader.ReadAsync())
                         {
+                            countCalls++;
+                            if (countCalls > maxCalls)
+                            {
+                                break;
+                            }
                             string timeInterval = reader.GetString(0);
                             timeInterval = await RemoveDigitsAsync(timeInterval);
                             timeInterval = timeInterval.Remove(timeInterval.Length - 2).Trim();
                             schedule = await AddToArray(schedule, timeInterval);
                         }
-
                         reader.Close();
                     }
-
 
                     if (schedule.Length == 0)
                     {
                         await botClient.SendTextMessageAsync(chatId: globalChatId,
-                        text: "⏲Расписания звонков пока _нет_ \\[3002\\]", parseMode: ParseMode.MarkdownV2);
+                        text: "⏲Расписания звонков пока _нет ❌_ \\[3002\\]", parseMode: ParseMode.MarkdownV2);
                         return;
                     }
 
@@ -1245,8 +1280,16 @@ internal class Program
                             {
                                 TimeSpan timeUntilNextClass = start - currentTime;
                                 string formattedTime = await FormatTime(timeUntilNextClass);
-                                await botClient.SendTextMessageAsync(chatId: globalChatId,
-                                text: $"⏱*До начала следующей пары осталось:* {await EscapeMarkdownV2(formattedTime)}", parseMode: ParseMode.MarkdownV2);
+                                if (timeUntilNextClass.TotalHours > 5)
+                                {
+                                    await botClient.SendTextMessageAsync(chatId: globalChatId,
+                                    text: $"⏱*До начала пар осталось более 5 часов, а точнее:* {await EscapeMarkdownV2(formattedTime)}", parseMode: ParseMode.MarkdownV2);
+                                }
+                                else
+                                {
+                                    await botClient.SendTextMessageAsync(chatId: globalChatId,
+                                    text: $"⏱*До начала следующей пары осталось:* {await EscapeMarkdownV2(formattedTime)}", parseMode: ParseMode.MarkdownV2);
+                                }
                                 return;
                             }
                         }
@@ -1311,20 +1354,17 @@ internal class Program
                         await botClient.SendTextMessageAsync(chatId: globalChatId,
                                                             text: "✏️Для добавления звонков введите их в данном формате:\n" +
                                                             "*Начало пары \\- Конец пары* `☰` *_Комментарий_* _\\(не обязательно\\)_\n" +
-                                                            "`▒` \\(_*обязательный разделитель, нажмите для копирования*_\\)\n" +
+                                                            "' ' \\(_*Перенос строки \\- обязательный разделитель*_\\)\n" +
                                                             "*Начало пары \\- Конец пары* `☰` *_Комментарий_* _\\(не обязательно\\)_\n" +
-                                                            "`▒` \\(_*обязательный разделитель, нажмите для копирования*_\\)\n" +
+                                                            "' ' \\(_*Перенос строки \\- обязательный разделитель*_\\)\n" +
                                                             "_И т\\.д\\. сколько нужно_" +
                                                             "\n\n" +
-                                                            "_`▒` и `☰` \\- являются обязательными разделителями\\._" +
+                                                            "_`☰` \\- является *Не* обязательным разделителем\\._" +
                                                             "\n\n" +
                                                             "Т\\.е выглядеть будет так \\(пример\\):\n" +
                                                             "09:00 \\- 10:20 `☰` *_Комментарий_*\n" +
-                                                            "`▒`\n" +
                                                             "10:30 \\- 11:50 `☰` *_Комментарий_*\n" +
-                                                            "`▒`\n" +
                                                             "12:30 \\- 13:50 `☰` *_Комментарий_*\n" +
-                                                            "`▒`\n" +
                                                             "14:00 \\- 15:20 `☰` *_Комментарий_*",
                                                             replyMarkup: Keyboards.cancel, parseMode: ParseMode.MarkdownV2);
                         pressingButtons["changeCalls"] = true;
@@ -1374,25 +1414,22 @@ internal class Program
                         await botClient.SendTextMessageAsync(chatId: globalChatId,
                                                             text: "✏️Для добавления расписания введите его в данном формате:\n" +
                                                             "*День недели*\n" +
-                                                            "`▒` \\(_*обязательный разделитель, нажмите для копирования*_\\)\n" +
+                                                            "' ' \\(_*Перенос строки \\- обязательный разделитель*_\\)\n" +
                                                             "*Название пары* `☰` *_Код аудитории_*\n" +
-                                                            "`▒` \\(_*обязательный разделитель, нажмите для копирования*_\\)\n" +
+                                                            "' ' \\(_*Перенос строки \\- обязательный разделитель*_\\)\n" +
                                                             "*Название пары* `≣` _*Пара по Знаменателю*_ `☰` *_Код аудитории_* *_Еще Код аудитории_*\n" +
-                                                            "`▒` \\(_*обязательный разделитель, нажмите для копирования*_\\)\n" +
+                                                            "' ' \\(_*Перенос строки \\- обязательный разделитель*_\\)\n" +
                                                             "_И т\\.д\\. сколько нужно_" +
                                                             "\n\n" +
-                                                            "`▒` и `☰` \\- являются обязательными разделителями\n" +
+                                                            "_Перенос строки_ и `☰` \\- являются обязательными разделителями\n" +
                                                             "`≣` и '` `'\\- является _необязательным_ разделителем для пар по *Знаменателю*\n" +
                                                             "Обратите внимание что пробел '` `' разделяет два разных _Кода аудитории_\n" +
                                                             "Так\\-же нужно обязательно писать *'`Ничего`'* или *'`\\-\\-\\-`'*, если иногда по числителю или знаменателю нет пары" +
                                                             "\n\n" +
                                                             "Т\\.е выглядеть будет так \\(пример\\):\n" +
                                                             "*Понедельник*\n" +
-                                                            "`▒`\n" +
                                                             "*Программирование* `☰` *_М/1_*\n" +
-                                                            "`▒`\n" +
                                                             "*Теория вероятности* `≣` *Математика* `☰` *_207_* *_105_*\n" +
-                                                            "`▒`\n" +
                                                             "*Практика* `≣` *Ничего* `☰` *_Вц/5_*",
                                                             replyMarkup: Keyboards.cancel, parseMode: ParseMode.MarkdownV2);
                         pressingButtons["changeSchedule"] = true;
@@ -2701,7 +2738,7 @@ internal class Program
                 return;
             }
             #endregion
-            #region Редактирование звонков
+            #region Изменить звонки
             if (pressingButtons["changeCalls"] && message.Text.Trim().ToLower() != "/cancel")
             {
                 await clearingTables($"Calls");
@@ -2712,16 +2749,16 @@ internal class Program
                 string comment, Time;
                 try//делим сообщение по разделителям и проверяем получается ли правильно поделить
                 {
-                    timeMass = message.Text.Trim().Split('▒');
+                    timeMass = message.Text.Trim().Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
                 }
                 catch
                 {
                     await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [3001]: Текст введен некорректно", replyMarkup: Keyboards.cancel);
                     return;
                 }
-                if (timeMass.Length == 0)
+                if (timeMass.Length <= 3)
                 {
-                    await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [4002]", replyMarkup: Keyboards.cancel);
+                    await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [3001]/[4002]: Необходимо добавить более 3х записей", replyMarkup: Keyboards.cancel);
                     return;
                 }
                 for (int i = 0; i < timeMass.Length; i++)
@@ -2731,15 +2768,27 @@ internal class Program
                     {
                         Time = timeMass[i].Trim().Split('☰')[0].Trim();
                         comment = timeMass[i].Trim().Split('☰')[1].Trim();
+                        if (string.IsNullOrWhiteSpace(comment))
+                        {
+                            await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [4002]: Введенный комментарий является пустым", replyMarkup: Keyboards.cancel);
+                            return;
+                        }
                     }
                     catch
                     {
                         Time = timeMass[i].Trim();
                         comment = " ";
                     }
-                    if (Regex.IsMatch(Time.Trim(), @"^([01]\d|2[0-3]):[0-5]\d\s-\s([01]\d|2[0-3]):[0-5]\d$"))//проверяем на соответствие формату времени: 00:00 - 00:00
+                    if (Regex.IsMatch(Time.Trim(), @"^([01]?\d|2[0-3]):[0-5]\d(-|(\s-\s)?|(\s-)?|(-\s)?)([01]\d|2[0-3]):[0-5]\d$"))//проверяем на соответствие формату времени: 00:00 - 00:00
                     {
-                        Time = Time.Replace("-", "⌁");//меняем 00:00 - 00:00 на 00:00 ⌁ 00:00
+                        if (Regex.IsMatch(Time.Trim(), @"^([01]?\d|2[0-3]):[0-5]\d(-|\s-|-\s)([01]\d|2[0-3]):[0-5]\d$"))//если у - не точно 2 пробела с двух сторон
+                        {
+                            Time = Time.Replace(" -", " ⌁ ").Replace("- ", " ⌁ ").Replace("-", " ⌁ ");
+                        }
+                        else//меняем 00:00 - 00:00 на 00:00 ⌁ 00:00
+                        {
+                            Time = Time.Replace("-", "⌁");
+                        }
                         switch (idCulls)//просто для красивого оформления
                         {
                             case 1:
@@ -2782,7 +2831,7 @@ internal class Program
                     else
                     {
                         await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [1004]: Введенный текст не соответствует формату времени: 00:00 - 00:00\n" +
-                            $"Более подробно Regex:\n ^([01]\\d|2[0-3]):[0-5]\\d\\s-\\s([01]\\d|2[0-3]):[0-5]\\d$", replyMarkup: Keyboards.cancel);
+                            $"Более подробно Regex:\n ^([01]\\d|2[0-3]):[0-5]\\d(-|(\\s-\\s)?|(\\s-)?|(-\\s)?)([01]\\d|2[0-3]):[0-5]\\d$", replyMarkup: Keyboards.cancel);
                         return;
                     }
                 }
@@ -2807,7 +2856,7 @@ internal class Program
                 string schedule, audience, EnglishDay, lesson_name1 = "", lesson_name2 = "", audience1 = "", audience2 = "";
                 try//делим сообщение по разделителям и проверяем получается ли правильно поделить
                 {
-                    scheduleMass = message.Text.Trim().Split('▒');
+                    scheduleMass = message.Text.Trim().Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
                     if (scheduleMass.Length == 0)
                     {
                         await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [4002]", replyMarkup: Keyboards.cancel);
@@ -2856,7 +2905,7 @@ internal class Program
                             }
                             if (schedule.Trim().Split('≣').Length >= 3)
                             {
-                                await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [3001]: Введено больше 2 уроков за одно время", replyMarkup: Keyboards.cancel, parseMode: ParseMode.MarkdownV2);
+                                await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [3001]: Введено больше 2 уроков для определенного времени в расписании", replyMarkup: Keyboards.cancel, parseMode: ParseMode.MarkdownV2);
                                 return;
                             }
                         }
@@ -2923,7 +2972,7 @@ internal class Program
                             lesson_name2 = "⒏ " + lesson_name2;
                             break;
                         default:
-                            await botClient.SendTextMessageAsync(globalChatId, $"❌❌Ошибка [1001]: Максимальное количество записей: 8", replyMarkup: Keyboards.cancel);
+                            await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [1001]: Максимальное количество записей: 8", replyMarkup: Keyboards.cancel);
                             return;
                     }
 
@@ -3382,7 +3431,7 @@ internal class Program
                         case "updateGroup":
                             // Обрабатываем нажатие на кнопку "Изменить группу"
                             TimeSpan elapsedTime = DateTime.Now - globalChangeGroupTime;
-                            if (elapsedTime.TotalMinutes > 10)
+                            if (elapsedTime.TotalMinutes > 10 || await dataAvailability(globalUserId, "Admins 1"))
                             {
                                 await ChangeGroup();
                             }
@@ -4448,27 +4497,47 @@ internal class Program
                   + $"║☱*Автор: {await EscapeMarkdownV2(userName)}*☱║\n"
                   + $"*—–\\-⟨{await EscapeMarkdownV2($"{data:yyyy-MM-dd}")}⟩\\-–—*";
 
-                if (globalMessagePhotoId != 0)//если нельзя отредактировать сообщение
+                if (globalMessagePhotoId != 0)//если можно отредактировать сообщение
                 {
-                    if (!ImageIsNull)
+                    try
                     {
-                        var inputMediaPhoto = new InputMediaPhoto(InputFile.FromStream(stream: ms, fileName: "image"));//преобразуем из массива байт и создаем импорт медиа
-                        // Заменяем фотографию в сообщении
-                        var editedPhotoMessage = await botClient.EditMessageMediaAsync(globalChatId,
-                            globalMessagePhotoId, inputMediaPhoto,
-                            replyMarkup: Keyboards.newsButton);
+                        if (!ImageIsNull)
+                        {
+                            var inputMediaPhoto = new InputMediaPhoto(InputFile.FromStream(stream: ms, fileName: "image"));//преобразуем из массива байт и создаем импорт медиа
+                                                                                                                           // Заменяем фотографию в сообщении
+                            var editedPhotoMessage = await botClient.EditMessageMediaAsync(globalChatId,
+                                globalMessagePhotoId, inputMediaPhoto,
+                                replyMarkup: Keyboards.newsButton);
+                        }
+                        else
+                        {
+                            await botClient.SendTextMessageAsync(
+                               chatId: globalChatId,
+                               text: "❌Ошибка [4001]: Отсутствие изображения");
+                            return;
+                        }
+                        // Заменяем текст в сообщении обязательно !EditMessageCaptionAsync!
+                        var editedTextMessage = await botClient.EditMessageCaptionAsync(globalChatId,
+                            globalMessagePhotoId, caption,
+                            parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.newsButton);
                     }
-                    else
+                    catch
                     {
-                        await botClient.SendTextMessageAsync(
-                           chatId: globalChatId,
-                           text: "❌Ошибка [4001]: Отсутствие изображения");
-                        return;
+                        try
+                        {
+                            await botClient.DeleteMessageAsync(globalChatId, globalMessagePhotoId);
+                        }
+                        catch { }
+                        if (!ImageIsNull)
+                        {
+                            var messageRes = await botClient.SendPhotoAsync(
+                              chatId: globalChatId,
+                              photo: InputFile.FromStream(stream: ms, fileName: "image"),//тут не нужно создавать импорт медиа т.к мы не редактируем
+                              caption: caption + "\n", // Добавляем символ перевода строки может и не нужен, хотел чтоб фотка была ниже текста но для этого нужно вставлять фотку как ссылку в текст
+                              parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.newsButton);
+                            globalMessagePhotoId = messageRes.MessageId;
+                        }
                     }
-                    // Заменяем текст в сообщении обязательно !EditMessageCaptionAsync!
-                    var editedTextMessage = await botClient.EditMessageCaptionAsync(globalChatId,
-                        globalMessagePhotoId, caption,
-                        parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.newsButton);
                 }
                 else
                 {
@@ -5033,7 +5102,7 @@ internal class Program
             return Task.FromResult(FinalText);
         }
 
-        async Task UpdateUserStatusAsync(long userId, bool locked)
+        async Task UpdateUserStatusAsync(long userId, bool locked, bool autoLocked = false)
         {
             string lockedText = locked ? "Блокировка" : "Разблокировка";
             try//блокируем или разблокируем пользователя
@@ -5055,7 +5124,10 @@ internal class Program
 
                 if (rowsAffected > 0)
                 {
-                    await botClient.SendTextMessageAsync(chatId: globalChatId, text: $"✅ {lockedText} пользователя ID: {userId} удалась!");
+                    if (!autoLocked)
+                    {
+                        await botClient.SendTextMessageAsync(chatId: globalChatId, text: $"✅ {lockedText} пользователя ID: {userId} удалась!");
+                    }
                     await UpdateIndexStatisticsAsync("Users");//обновляем индекса таблицы
                     await botClient.SendTextMessageAsync(chatId: userId, text: $"❗️Вам выдана {lockedText}❗️");
                 }
@@ -5173,7 +5245,7 @@ internal class Program
                 Console.ForegroundColor = ConsoleColor.Red;//цвет консоли
                 Console.WriteLine($"[{DateTime.Now}] Пользователь {globalChatId} отправлял слишком много сообщений в короткое время!");
                 Console.ResetColor();
-                await UpdateUserStatusAsync(globalUserId, true);//блокируем пользователя
+                await UpdateUserStatusAsync(globalUserId, true, true);//блокируем пользователя
                 await botClient.SendTextMessageAsync(chatId: globalChatId, text: "❌Ошибка [1005]: Вы заблокированы за спам...");
                 await botClient.SendTextMessageAsync(chatId: globalAdminId, text: $"🛑Пользователь {globalUserId} заблокирован за спам🛑");
                 return true;
@@ -5317,7 +5389,7 @@ internal class Program
         {
             await sqlConnection.OpenAsync();
 
-            using (SqlCommand command = new SqlCommand("SELECT chat_id FROM Groups WHERE group_Name = @groupName", sqlConnection))
+            using (SqlCommand command = new("SELECT chat_id FROM Groups WHERE group_Name = @groupName", sqlConnection))
             {
                 command.Parameters.AddWithValue("@groupName", groupName);
 
@@ -5370,9 +5442,17 @@ internal class Program
                     EnglishDayThen = RussianDayThen;
                     EnglishDayYesterday = RussianDayYesterday;
 
-                    RussianDayNow = weekDays.Keys.ElementAt(weekDays.Values.ToList().IndexOf(EnglishDayNow));
-                    RussianDayThen = weekDays.Keys.ElementAt(weekDays.Values.ToList().IndexOf(EnglishDayThen));
-                    RussianDayYesterday = weekDays.Keys.ElementAt(weekDays.Values.ToList().IndexOf(EnglishDayYesterday));
+                    try
+                    {
+                        RussianDayYesterday = weekDays.Keys.ElementAt(weekDays.Values.ToList().IndexOf(EnglishDayYesterday));
+                        RussianDayNow = weekDays.Keys.ElementAt(weekDays.Values.ToList().IndexOf(EnglishDayNow));
+                        RussianDayThen = weekDays.Keys.ElementAt(weekDays.Values.ToList().IndexOf(EnglishDayThen));
+                    }
+                    catch
+                    {
+                        await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [1003]", replyMarkup: Keyboards.cancel);
+                        return Exception = true;
+                    }
                 }
                 else
                 {
@@ -5441,13 +5521,13 @@ internal class Program
         async Task ChangeGroup()
         {
             //списки для хранения названий групп и инлайн кнопок
-            List<string> groupNames = new List<string>();
-            List<InlineKeyboardButton[]> inlineButtonRows = new List<InlineKeyboardButton[]>();
+            List<string> groupNames = new();
+            List<InlineKeyboardButton[]> inlineButtonRows = new();
 
             sqlConnection.Close();
             await sqlConnection.OpenAsync();
             //запрос к базе данных для получения данных из столбца "group_Name"
-            SqlCommand command = new SqlCommand("SELECT group_Name FROM Groups", sqlConnection);
+            SqlCommand command = new("SELECT group_Name FROM Groups", sqlConnection);
             using (SqlDataReader reader = command.ExecuteReader())
             {
                 while (reader.Read())
@@ -5471,7 +5551,7 @@ internal class Program
             inlineButtonRows.Add(inlineButtonCancel);
             await sqlConnection.CloseAsync();
             // Создадим объект InlineKeyboardMarkup с использованием списков названий групп и инлайн кнопок
-            InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup(inlineButtonRows.ToArray());
+            InlineKeyboardMarkup inlineKeyboardMarkup = new(inlineButtonRows.ToArray());
 
             var mess = await botClient.SendTextMessageAsync(globalChatId, "*❕Выберите свою группу 👥:*", parseMode: ParseMode.MarkdownV2, replyMarkup: inlineKeyboardMarkup);
             globalGroupChangeId = mess.MessageId;

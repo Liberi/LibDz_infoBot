@@ -3,6 +3,7 @@ namespace LibDz_infoBot
 {
     public class SpamDetector
     {
+        public DateTime StartTime;
         private Dictionary<long, List<DateTime>> userMessages;
 
         public SpamDetector()
@@ -30,7 +31,8 @@ namespace LibDz_infoBot
             {
                 var oldestMessageTime = messages[0];
                 var timeElapsed = currentTime - oldestMessageTime;
-                return timeElapsed < timeWindow;
+                TimeSpan elapsedTime = DateTime.Now - StartTime;//не баним пользователя если с момента запуска прошло меньше 30 сек
+                return (timeElapsed < timeWindow && elapsedTime.TotalSeconds > 30);
             }
 
             return false;
