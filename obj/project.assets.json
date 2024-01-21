@@ -2,13 +2,13 @@
   "version": 3,
   "targets": {
     "net6.0": {
-      "EPPlus/7.0.5": {
+      "EPPlus/7.0.6": {
         "type": "package",
         "dependencies": {
           "EPPlus.Interfaces": "6.1.1",
           "EPPlus.System.Drawing": "6.1.1",
           "Microsoft.Extensions.Configuration.Json": "6.0.0",
-          "Microsoft.IO.RecyclableMemoryStream": "2.3.2",
+          "Microsoft.IO.RecyclableMemoryStream": "3.0.0",
           "System.ComponentModel.Annotations": "5.0.0",
           "System.Security.Cryptography.Pkcs": "6.0.4",
           "System.Text.Encoding.CodePages": "6.0.0"
@@ -194,15 +194,15 @@
           "buildTransitive/netcoreapp3.1/_._": {}
         }
       },
-      "Microsoft.IO.RecyclableMemoryStream/2.3.2": {
+      "Microsoft.IO.RecyclableMemoryStream/3.0.0": {
         "type": "package",
         "compile": {
-          "lib/net5.0/Microsoft.IO.RecyclableMemoryStream.dll": {
+          "lib/net6.0/Microsoft.IO.RecyclableMemoryStream.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net5.0/Microsoft.IO.RecyclableMemoryStream.dll": {
+          "lib/net6.0/Microsoft.IO.RecyclableMemoryStream.dll": {
             "related": ".xml"
           }
         }
@@ -345,7 +345,7 @@
           "buildTransitive/net6.0/_._": {}
         }
       },
-      "System.Data.SqlClient/4.8.5": {
+      "System.Data.SqlClient/4.8.6": {
         "type": "package",
         "dependencies": {
           "Microsoft.Win32.Registry": "4.7.0",
@@ -610,15 +610,15 @@
     }
   },
   "libraries": {
-    "EPPlus/7.0.5": {
-      "sha512": "9mmFMS0TkcWSn/izLdej/znBpzuwuJJud5QicgYJw2jtpW/+Jtbgs1u7Wt7Hnm7FyAVyWQ3PU5FDiqORZ7M1cw==",
+    "EPPlus/7.0.6": {
+      "sha512": "3sc2sV4we6SrFn1aTLWVI9+v/RgEBtSN9Zum2DaolvsbJO05LbrUw8CFnJmu27VIktUDgk0GwQkn3y+Kizm+dA==",
       "type": "package",
-      "path": "epplus/7.0.5",
+      "path": "epplus/7.0.6",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "EPPlusLogo.png",
-        "epplus.7.0.5.nupkg.sha512",
+        "epplus.7.0.6.nupkg.sha512",
         "epplus.nuspec",
         "lib/net35/EPPlus.dll",
         "lib/net35/EPPlus.xml",
@@ -851,25 +851,21 @@
         "useSharedDesignerContext.txt"
       ]
     },
-    "Microsoft.IO.RecyclableMemoryStream/2.3.2": {
-      "sha512": "Oh1qXXFdJFcHozvb4H6XYLf2W0meZFuG0A+TfapFPj9z5fd4vxiARGEhAaLj/6XWQaMYIv4SH/9Q6H78Hw0E2Q==",
+    "Microsoft.IO.RecyclableMemoryStream/3.0.0": {
+      "sha512": "irv0HuqoH8Ig5i2fO+8dmDNdFdsrO+DoQcedwIlb810qpZHBNQHZLW7C/AHBQDgLLpw2T96vmMAy/aE4Yj55Sg==",
       "type": "package",
-      "path": "microsoft.io.recyclablememorystream/2.3.2",
+      "path": "microsoft.io.recyclablememorystream/3.0.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "README.md",
-        "lib/net462/Microsoft.IO.RecyclableMemoryStream.dll",
-        "lib/net462/Microsoft.IO.RecyclableMemoryStream.xml",
-        "lib/net5.0/Microsoft.IO.RecyclableMemoryStream.dll",
-        "lib/net5.0/Microsoft.IO.RecyclableMemoryStream.xml",
-        "lib/netcoreapp2.1/Microsoft.IO.RecyclableMemoryStream.dll",
-        "lib/netcoreapp2.1/Microsoft.IO.RecyclableMemoryStream.xml",
+        "lib/net6.0/Microsoft.IO.RecyclableMemoryStream.dll",
+        "lib/net6.0/Microsoft.IO.RecyclableMemoryStream.xml",
         "lib/netstandard2.0/Microsoft.IO.RecyclableMemoryStream.dll",
         "lib/netstandard2.0/Microsoft.IO.RecyclableMemoryStream.xml",
         "lib/netstandard2.1/Microsoft.IO.RecyclableMemoryStream.dll",
         "lib/netstandard2.1/Microsoft.IO.RecyclableMemoryStream.xml",
-        "microsoft.io.recyclablememorystream.2.3.2.nupkg.sha512",
+        "microsoft.io.recyclablememorystream.3.0.0.nupkg.sha512",
         "microsoft.io.recyclablememorystream.nuspec"
       ]
     },
@@ -1176,10 +1172,10 @@
         "useSharedDesignerContext.txt"
       ]
     },
-    "System.Data.SqlClient/4.8.5": {
-      "sha512": "fRqxut4lrndPHrXD+ht1XRmCL3obuKldm4XjCRYS9p5f7FSR7shBxAwTkDrpFMsHC9BhNgjjmUtiIjvehn5zkg==",
+    "System.Data.SqlClient/4.8.6": {
+      "sha512": "2Ij/LCaTQRyAi5lAv7UUTV9R2FobC8xN9mE0fXBZohum/xLl8IZVmE98Rq5ugQHjCgTBRKqpXRb4ORulRdA6Ig==",
       "type": "package",
-      "path": "system.data.sqlclient/4.8.5",
+      "path": "system.data.sqlclient/4.8.6",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -1256,7 +1252,7 @@
         "runtimes/win/lib/netstandard2.0/System.Data.SqlClient.xml",
         "runtimes/win/lib/uap10.0.16299/System.Data.SqlClient.dll",
         "runtimes/win/lib/uap10.0.16299/System.Data.SqlClient.xml",
-        "system.data.sqlclient.4.8.5.nupkg.sha512",
+        "system.data.sqlclient.4.8.6.nupkg.sha512",
         "system.data.sqlclient.nuspec",
         "useSharedDesignerContext.txt",
         "version.txt"
@@ -1663,9 +1659,9 @@
   },
   "projectFileDependencyGroups": {
     "net6.0": [
-      "EPPlus >= 7.0.5",
+      "EPPlus >= 7.0.6",
       "System.Configuration.ConfigurationManager >= 8.0.0",
-      "System.Data.SqlClient >= 4.8.5",
+      "System.Data.SqlClient >= 4.8.6",
       "Telegram.Bot >= 19.0.0"
     ]
   },
@@ -1710,7 +1706,7 @@
         "dependencies": {
           "EPPlus": {
             "target": "Package",
-            "version": "[7.0.5, )"
+            "version": "[7.0.6, )"
           },
           "System.Configuration.ConfigurationManager": {
             "target": "Package",
@@ -1718,7 +1714,7 @@
           },
           "System.Data.SqlClient": {
             "target": "Package",
-            "version": "[4.8.5, )"
+            "version": "[4.8.6, )"
           },
           "Telegram.Bot": {
             "target": "Package",

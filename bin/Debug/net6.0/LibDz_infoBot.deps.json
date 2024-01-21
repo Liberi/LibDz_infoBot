@@ -8,29 +8,29 @@
     ".NETCoreApp,Version=v6.0": {
       "LibDz_infoBot/1.0.0": {
         "dependencies": {
-          "EPPlus": "7.0.5",
+          "EPPlus": "7.0.6",
           "System.Configuration.ConfigurationManager": "8.0.0",
-          "System.Data.SqlClient": "4.8.5",
+          "System.Data.SqlClient": "4.8.6",
           "Telegram.Bot": "19.0.0"
         },
         "runtime": {
           "LibDz_infoBot.dll": {}
         }
       },
-      "EPPlus/7.0.5": {
+      "EPPlus/7.0.6": {
         "dependencies": {
           "EPPlus.Interfaces": "6.1.1",
           "EPPlus.System.Drawing": "6.1.1",
           "Microsoft.Extensions.Configuration.Json": "6.0.0",
-          "Microsoft.IO.RecyclableMemoryStream": "2.3.2",
+          "Microsoft.IO.RecyclableMemoryStream": "3.0.0",
           "System.ComponentModel.Annotations": "5.0.0",
           "System.Security.Cryptography.Pkcs": "6.0.4",
           "System.Text.Encoding.CodePages": "6.0.0"
         },
         "runtime": {
           "lib/net6.0/EPPlus.dll": {
-            "assemblyVersion": "7.0.5.0",
-            "fileVersion": "7.0.5.0"
+            "assemblyVersion": "7.0.6.0",
+            "fileVersion": "7.0.6.0"
           }
         }
       },
@@ -150,11 +150,11 @@
           }
         }
       },
-      "Microsoft.IO.RecyclableMemoryStream/2.3.2": {
+      "Microsoft.IO.RecyclableMemoryStream/3.0.0": {
         "runtime": {
-          "lib/net5.0/Microsoft.IO.RecyclableMemoryStream.dll": {
-            "assemblyVersion": "2.3.2.0",
-            "fileVersion": "2.3.2.0"
+          "lib/net6.0/Microsoft.IO.RecyclableMemoryStream.dll": {
+            "assemblyVersion": "3.0.0.0",
+            "fileVersion": "3.0.0.0"
           }
         }
       },
@@ -235,7 +235,7 @@
           }
         }
       },
-      "System.Data.SqlClient/4.8.5": {
+      "System.Data.SqlClient/4.8.6": {
         "dependencies": {
           "Microsoft.Win32.Registry": "4.7.0",
           "System.Security.Principal.Windows": "4.7.0",
@@ -243,22 +243,22 @@
         },
         "runtime": {
           "lib/netcoreapp2.1/System.Data.SqlClient.dll": {
-            "assemblyVersion": "4.6.1.5",
-            "fileVersion": "4.700.22.51706"
+            "assemblyVersion": "4.6.1.6",
+            "fileVersion": "4.700.23.52603"
           }
         },
         "runtimeTargets": {
           "runtimes/unix/lib/netcoreapp2.1/System.Data.SqlClient.dll": {
             "rid": "unix",
             "assetType": "runtime",
-            "assemblyVersion": "4.6.1.5",
-            "fileVersion": "4.700.22.51706"
+            "assemblyVersion": "4.6.1.6",
+            "fileVersion": "4.700.23.52603"
           },
           "runtimes/win/lib/netcoreapp2.1/System.Data.SqlClient.dll": {
             "rid": "win",
             "assetType": "runtime",
-            "assemblyVersion": "4.6.1.5",
-            "fileVersion": "4.700.22.51706"
+            "assemblyVersion": "4.6.1.6",
+            "fileVersion": "4.700.23.52603"
           }
         }
       },
@@ -358,12 +358,12 @@
       "serviceable": false,
       "sha512": ""
     },
-    "EPPlus/7.0.5": {
+    "EPPlus/7.0.6": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-9mmFMS0TkcWSn/izLdej/znBpzuwuJJud5QicgYJw2jtpW/+Jtbgs1u7Wt7Hnm7FyAVyWQ3PU5FDiqORZ7M1cw==",
-      "path": "epplus/7.0.5",
-      "hashPath": "epplus.7.0.5.nupkg.sha512"
+      "sha512": "sha512-3sc2sV4we6SrFn1aTLWVI9+v/RgEBtSN9Zum2DaolvsbJO05LbrUw8CFnJmu27VIktUDgk0GwQkn3y+Kizm+dA==",
+      "path": "epplus/7.0.6",
+      "hashPath": "epplus.7.0.6.nupkg.sha512"
     },
     "EPPlus.Interfaces/6.1.1": {
       "type": "package",
@@ -435,12 +435,12 @@
       "path": "microsoft.extensions.primitives/6.0.0",
       "hashPath": "microsoft.extensions.primitives.6.0.0.nupkg.sha512"
     },
-    "Microsoft.IO.RecyclableMemoryStream/2.3.2": {
+    "Microsoft.IO.RecyclableMemoryStream/3.0.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-Oh1qXXFdJFcHozvb4H6XYLf2W0meZFuG0A+TfapFPj9z5fd4vxiARGEhAaLj/6XWQaMYIv4SH/9Q6H78Hw0E2Q==",
-      "path": "microsoft.io.recyclablememorystream/2.3.2",
-      "hashPath": "microsoft.io.recyclablememorystream.2.3.2.nupkg.sha512"
+      "sha512": "sha512-irv0HuqoH8Ig5i2fO+8dmDNdFdsrO+DoQcedwIlb810qpZHBNQHZLW7C/AHBQDgLLpw2T96vmMAy/aE4Yj55Sg==",
+      "path": "microsoft.io.recyclablememorystream/3.0.0",
+      "hashPath": "microsoft.io.recyclablememorystream.3.0.0.nupkg.sha512"
     },
     "Microsoft.NETCore.Platforms/3.1.0": {
       "type": "package",
@@ -512,12 +512,12 @@
       "path": "system.configuration.configurationmanager/8.0.0",
       "hashPath": "system.configuration.configurationmanager.8.0.0.nupkg.sha512"
     },
-    "System.Data.SqlClient/4.8.5": {
+    "System.Data.SqlClient/4.8.6": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-fRqxut4lrndPHrXD+ht1XRmCL3obuKldm4XjCRYS9p5f7FSR7shBxAwTkDrpFMsHC9BhNgjjmUtiIjvehn5zkg==",
-      "path": "system.data.sqlclient/4.8.5",
-      "hashPath": "system.data.sqlclient.4.8.5.nupkg.sha512"
+      "sha512": "sha512-2Ij/LCaTQRyAi5lAv7UUTV9R2FobC8xN9mE0fXBZohum/xLl8IZVmE98Rq5ugQHjCgTBRKqpXRb4ORulRdA6Ig==",
+      "path": "system.data.sqlclient/4.8.6",
+      "hashPath": "system.data.sqlclient.4.8.6.nupkg.sha512"
     },
     "System.Drawing.Common/6.0.0": {
       "type": "package",

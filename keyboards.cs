@@ -135,6 +135,39 @@ namespace LibDz_infoBot
             },
         });
 
+        public static InlineKeyboardMarkup addComment = new(new[]
+        {
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "📑Добавить комментарий", callbackData: "addComment"),
+            },
+        });
+
+        public static InlineKeyboardMarkup noDz = new(new[]
+        {
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "⚠️Отмена пар", callbackData: "noPairs"),
+                InlineKeyboardButton.WithCallbackData(text: "❗️Нет ДЗ", callbackData: "noDZ"),
+            },
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "🚫Отменить🚫", callbackData: "cancel"),
+            }
+        });
+
+        public static InlineKeyboardMarkup confirmation = new(new[]
+        {
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "✅Подтвердить✅", callbackData: "confirm"),
+            },
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "🚫Отменить🚫", callbackData: "cancel"),
+            }
+        });
+
 
         public static InlineKeyboardMarkup newsButton = new(new[]
         {

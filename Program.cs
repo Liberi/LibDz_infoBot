@@ -13,6 +13,7 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using static System.Net.Mime.MediaTypeNames;
 
 internal class Program
 {
@@ -88,10 +89,11 @@ internal class Program
             { "суббота", "Saturday" },
             { "воскресенье", "Sunday" }
         };
-        int globalMessageTextId = 0, globalMessagePhotoId = 0, globalNewsId = 0, globalNewsNumber = 0, globalDzInfo = 0, globalDzTextInfo = 0, globalIdEditMessage = 0, globalTimerCountRestart = 0, globalGroupChangeId = 0;//глобальные переменные, которые используются для разных действий во всем коде
+        int globalMessageTextId = 0, globalMessagePhotoId = 0, globalNewsId = 0, globalNewsNumber = 0, globalDzInfoAdd = 0, globalDzInfoEdit = 0, globalCullsInfoEditId = 0, globalIdEditMessage = 0, globalTimerCountRestart = 0, globalDeleteMessageCancelId = 0;//глобальные переменные, которые используются для разных действий во всем коде
         long globalUserId = 0, globalChatId = 1545914098, globalIdBaseChat = /*-1001602210737*/  -1001797288636, globalAdminId = 1545914098;
-        string globalUsername = "СтандартИмя", Exception = "ПУСТО", globalKeyMenu = "MainMenu", weekType = "Числитель", globalTablePicture = "4 6 Null", //keyMenu переменная которая сохраняет меню в котором мы сейчас находимся (для кнопки назад)
-            globalFilePathWeekType = Path.Combine(Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.Parent.FullName, "Databases", "weekType.txt"), globalGroupName = "ИС1-21";
+        string globalUsername = "СтандартИмя", globalGroupName = "ИС1-21", Exception = "ПУСТО", globalKeyMenu = "MainMenu", weekType = "Числитель", globalTablePicture = "4 6 Null", //keyMenu переменная которая сохраняет меню в котором мы сейчас находимся (для кнопки назад)
+            globalFilePathWeekType = Path.Combine(Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.Parent.FullName, "Databases", "weekType.txt"),
+            globalConfirmValue = "";
         string EnglishDayNow = "Monday", EnglishDayThen = "Monday", EnglishDayYesterday = "Monday", RussianDayNow = "Понедельник", RussianDayThen = "Понедельник", RussianDayYesterday = "Понедельник", DateDayNow = "01.01", DateDayThen = "01.01", DateDayYesterday = "01.01";
         DateTime globalStartTime = DateTime.Now, globalChangeGroupTime = DateTime.Now.AddMinutes(-10);
         spamDetector.StartTime = globalStartTime;
@@ -188,9 +190,9 @@ internal class Program
         var timerDz = new System.Timers.Timer();
         timerDz.Elapsed += new ElapsedEventHandler(async (sender, eventArgs) =>
         {
-            string text = await DzBaseChat(globalGroupName);// отправляем сообщение
-            int homeworkNullCount = int.Parse(text.Split('☰')[0].Trim());//проверяем сколько пустых строк дз 
-            bool FTres = bool.Parse(text.Split('☰')[1].Trim());//отправилось ли вообще 
+            object[] DzChat = await DzBaseChat(globalGroupName);// отправляем сообщение
+            int homeworkNullCount = (int)DzChat[0];//проверяем сколько пустых строк дз 
+            bool FTres = (bool)DzChat[1];//отправилось ли вообще 
             if (FTres)
             {
                 if (homeworkNullCount >= 3)
@@ -305,6 +307,7 @@ internal class Program
                     if (EnglishDay != "Monday")
                     {
                         await clearingTables($"[{EnglishDay}_Homework]");//!!!
+                        //метод FullDeleteDz заюзать
                     }
                 }
                 else
@@ -532,6 +535,11 @@ internal class Program
                         updateCommand.Parameters.AddWithValue("@userName", globalUsername);
                         updateCommand.ExecuteNonQuery();
                     }
+                    else if (globalUsername == "СтандартИмя" || globalUsername == "НетИмени")
+                    {
+                        await botClient.SendTextMessageAsync(globalChatId, "❕Нам не удалось считать ваше _имя_, пожалуйста добавьте его _\\(Желательно ник TG, Без @\\)_ в своем *профиле* для возможной связи\\!\n" +
+                            "✏️Для изменения имени войдите в /profile", replyMarkup: Keyboards.MainMenu, parseMode: ParseMode.MarkdownV2);
+                    }
                 }
                 sqlConnection.Close();
                 return;
@@ -553,6 +561,7 @@ internal class Program
                 "/menu ➯ Переход в главное меню\r\n" +
                 "/cancel ➯ Отмена выполнения предыдущего действия\r\n" +
                 "/news ➯ Отобразить последние новости\r\n" +
+                "/fast\\_edit\\_dz ➯ Быстрый переход к редактированию дз\r\n" +
                 "/change\\_admin\\_type ➯ Изменение типа администратора\r\n" +
                 "/update\\_photo\\_news ➯ Обновить фото к новости\r\n" +
                 "/update\\_week\\_type ➯ Обновить тип недели\r\n" +
@@ -577,6 +586,7 @@ internal class Program
                 "`\\[3001\\]` ➱ Ошибка в преобразовании текста для базы данных;\r\n" +
                 "`\\[3002\\]` ➱ Значение в базе данных не найдено или равно NULL;\r\n" +
                 "`\\[3003\\]` ➱ Значение уже находится в базе данных;\r\n" +
+                "`\\[3004\\]` ➱ Невозможно явно определить единственно верное значение из БД;\r\n" +
                 "\r\n" +
                 "`\\[4001\\]` ➱ Отсутствие файлов;\r\n" +
                 "`\\[4002\\]` ➱ Одной из значений имеет значение NULL или размер равный 0;\r\n" +
@@ -717,7 +727,9 @@ internal class Program
                 }
                 else
                 {
-                    await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы не являетесь админом или ваш уровень недостаточен [3002]+[4003]");
+                    await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы Не являетесь админом или ваш уровень недостаточен\\! \\[3002\\]+\\[4003\\]\n" +
+                        $"_Если вы и точно хотите сменить тип недели, перепроверьте, ошибка маловероятна\\. Для изменения данных обращайтесь по 👥Контактам в соответствующем разделе\\!_",
+                        parseMode: ParseMode.MarkdownV2);
                 }
                 return;
             }
@@ -1161,26 +1173,13 @@ internal class Program
             #region Кнопка Расписание звонков
             if (message.Text.Trim() == "🔔Расписание звонков")
             {
-                if (await dataAvailability(0, "Calls ?"))//проверяем есть ли вообще звонки в базе
-                {
-                    string Calls = "🛎*Расписание звонков:*\n";
-                    sqlConnection.Open();
-                    SqlCommand command = new("SELECT time_interval, note FROM Calls", sqlConnection);
-                    SqlDataReader reader = command.ExecuteReader();
-                    int count = 0;
-                    while (reader.Read())//считываем звонки из базы
-                    {
-                        string time = reader.GetString(reader.GetOrdinal("time_interval"));
-                        string note = reader.GetString(reader.GetOrdinal("note"));
-                        Calls += $"`{time}`" + note + "\n";//составляем сообщение
-                        count++;
-                    }
-                    reader.Close();
-                    sqlConnection.Close();
+                if (await dataAvailability(0, "Calls ?", groupName: globalGroupName))
+                {//проверяем есть ли вообще звонки в базе
+                    string[] calls = await CallsInfo(globalGroupName);
                     //отправляем
                     await botClient.SendTextMessageAsync(chatId: globalChatId,
-                    text: Calls, parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.tablePicture);
-                    globalTablePicture = $"10 {count} Calls";
+                    text: calls[0], parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.tablePicture);
+                    globalTablePicture = $"10 {calls[1]} Calls";
                 }
                 else
                 {
@@ -1197,8 +1196,8 @@ internal class Program
                 {
                     return;
                 }
-                if (await dataAvailability(0, "Calls ?"))//проверяем есть ли вообще звонки в базе
-                {
+                if (await dataAvailability(0, "Calls ?", groupName: globalGroupName))
+                {//проверяем есть ли вообще звонки в базе
                     string EnglishDay = "";
                     int maxCalls = 0;
                     if (!weekDays.TryGetValue(DateTime.Today.ToString("dddd"), out EnglishDay))
@@ -1225,7 +1224,7 @@ internal class Program
 
                     if (maxCalls == 0)
                     {
-                        await botClient.SendTextMessageAsync(globalChatId, $"⏲По расписанию у вашей группы сегодня _нет ❌_ пар \\[3002\\]", parseMode: ParseMode.MarkdownV2);
+                        await botClient.SendTextMessageAsync(globalChatId, $"⏲По расписанию у вашей группы сегодня _нет_ пар ❌ \\[3002\\]", parseMode: ParseMode.MarkdownV2);
                         return;
                     }
 
@@ -1233,7 +1232,7 @@ internal class Program
                     using (SqlConnection connection = new(connectionString))
                     {
                         await connection.OpenAsync();
-                        SqlCommand command = new("SELECT time_interval FROM Calls ORDER BY lesson_number", connection);
+                        SqlCommand command = new($"SELECT time_interval FROM [{globalGroupName}_Calls] ORDER BY lesson_number", connection);
                         SqlDataReader reader = await command.ExecuteReaderAsync();
 
                         int countCalls = 0;
@@ -1255,7 +1254,7 @@ internal class Program
                     if (schedule.Length == 0)
                     {
                         await botClient.SendTextMessageAsync(chatId: globalChatId,
-                        text: "⏲Расписания звонков пока _нет ❌_ \\[3002\\]", parseMode: ParseMode.MarkdownV2);
+                        text: "⏲Расписания звонков пока _нет_ ❌ \\[3002\\]", parseMode: ParseMode.MarkdownV2);
                         return;
                     }
 
@@ -1295,13 +1294,13 @@ internal class Program
                         }
                     }
                     await botClient.SendTextMessageAsync(chatId: globalChatId,
-                        text: "*❗️Сейчас _нет_ занятий❗️*", parseMode: ParseMode.MarkdownV2);
+                        text: "*❗️По расписанию у вашей группы сейчас _нет_ занятий❗️*", parseMode: ParseMode.MarkdownV2);
                     return;
                 }
                 else
                 {
                     await botClient.SendTextMessageAsync(chatId: globalChatId,
-                    text: "⏲Расписания звонков пока _нет_ \\[3002\\]", parseMode: ParseMode.MarkdownV2);
+                    text: "⏲Расписания звонков пока _нет_ ❌ \\[3002\\]", parseMode: ParseMode.MarkdownV2);
                 }
                 return;
             }
@@ -1328,7 +1327,7 @@ internal class Program
             #region Кнопка Управление Расписание
             if (message.Text.Trim() == "⏰Управление \"Расписание\"")
             {
-                if (await dataAvailability(globalUserId, "Admins"))
+                if (await dataAvailability(globalUserId, "Admins 1") || await dataAvailability(globalUserId, "Admins 2"))
                 {
                     await botClient.SendTextMessageAsync(
                     chatId: globalChatId,
@@ -1347,11 +1346,16 @@ internal class Program
             #region Кнопка Изменить звонки
             if (message.Text.Trim() == "✏️Изменить звонки")
             {
+                if (!await ReturnGroupName())
+                {
+                    return;
+                }
                 if (await buttonTest())
                 {
+
                     if (await dataAvailability(globalUserId, "Admins 1") || await dataAvailability(globalUserId, "Admins 2"))
                     {
-                        await botClient.SendTextMessageAsync(chatId: globalChatId,
+                        var messageResDel = await botClient.SendTextMessageAsync(chatId: globalChatId,
                                                             text: "✏️Для добавления звонков введите их в данном формате:\n" +
                                                             "*Начало пары \\- Конец пары* `☰` *_Комментарий_* _\\(не обязательно\\)_\n" +
                                                             "' ' \\(_*Перенос строки \\- обязательный разделитель*_\\)\n" +
@@ -1367,6 +1371,8 @@ internal class Program
                                                             "12:30 \\- 13:50 `☰` *_Комментарий_*\n" +
                                                             "14:00 \\- 15:20 `☰` *_Комментарий_*",
                                                             replyMarkup: Keyboards.cancel, parseMode: ParseMode.MarkdownV2);
+                        globalDeleteMessageCancelId = messageResDel.MessageId;
+
                         pressingButtons["changeCalls"] = true;
                     }
                     else
@@ -1384,19 +1390,40 @@ internal class Program
             #region Кнопка Удалить звонки
             if (message.Text.Trim() == "🗑Удалить звонки")
             {
-                if (await dataAvailability(globalUserId, "Admins 1") || await dataAvailability(globalUserId, "Admins 2"))
+                if (await buttonTest())
                 {
-                    int rowsAffected = await clearingTables($"Calls"); ;//просто удаляем все звонки
+                    if (!await ReturnGroupName())
+                    {
+                        return;
+                    }
+                    if (await dataAvailability(globalUserId, "Admins"))
+                    {
+                        string[] calls = await CallsInfo(globalGroupName);
 
-                    await botClient.SendTextMessageAsync(chatId: globalChatId,
-                                                        text: $"✅Произведено удаление *Звонков*, удалено записей: _{rowsAffected}_",
-                                                        parseMode: ParseMode.MarkdownV2);
+                        if (Convert.ToInt32(calls[1]) > 3)
+                        {
+                            var messageRes = await botClient.SendTextMessageAsync(chatId: globalChatId, text: calls[0], parseMode: ParseMode.MarkdownV2);
+                            globalCullsInfoEditId = messageRes.MessageId;
+                            var messageResDel = await botClient.SendTextMessageAsync(chatId: globalChatId,
+                                text: "🗑Подтвердите удаление звонков!", replyMarkup: Keyboards.confirmation);
+                            globalDeleteMessageCancelId = messageResDel.MessageId;
+                            globalConfirmValue = "CallsDelete";
+                        }
+                        else
+                        {
+                            await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [3002]: Звонки уже отсутствуют в базе данных...");
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы не являетесь админом [3002]+[4003]");
+                    }
                 }
                 else
                 {
-                    await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы не являетесь админом или ваш уровень недостаточен [3002]+[4003]");
+                    await botClient.SendTextMessageAsync(globalChatId, "⭕️Для выполнения другого действия закончите работу с предыдущим\nИли введите /cancel");
                 }
-
                 return;
             }
             #endregion
@@ -1411,7 +1438,7 @@ internal class Program
                     }
                     if (await dataAvailability(globalUserId, "Admins 1") || await dataAvailability(globalUserId, "Admins 2"))
                     {
-                        await botClient.SendTextMessageAsync(chatId: globalChatId,
+                        var messageResDel = await botClient.SendTextMessageAsync(chatId: globalChatId,
                                                             text: "✏️Для добавления расписания введите его в данном формате:\n" +
                                                             "*День недели*\n" +
                                                             "' ' \\(_*Перенос строки \\- обязательный разделитель*_\\)\n" +
@@ -1432,6 +1459,8 @@ internal class Program
                                                             "*Теория вероятности* `≣` *Математика* `☰` *_207_* *_105_*\n" +
                                                             "*Практика* `≣` *Ничего* `☰` *_Вц/5_*",
                                                             replyMarkup: Keyboards.cancel, parseMode: ParseMode.MarkdownV2);
+                        globalDeleteMessageCancelId = messageResDel.MessageId;
+
                         pressingButtons["changeSchedule"] = true;
                     }
                     else
@@ -1457,9 +1486,11 @@ internal class Program
                     }
                     if (await dataAvailability(globalUserId, "Admins 1") || await dataAvailability(globalUserId, "Admins 2"))
                     {
-                        await botClient.SendTextMessageAsync(chatId: globalChatId,
+                        var messageResDel = await botClient.SendTextMessageAsync(chatId: globalChatId,
                                                             text: $"✂️Для удаления расписания введите *День недели* или введите *ВСЕ* для удаления всего расписания",
                                                             parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.cancel);
+                        globalDeleteMessageCancelId = messageResDel.MessageId;
+
                         pressingButtons["deleteSchedule"] = true;
                     }
                     else
@@ -1499,19 +1530,21 @@ internal class Program
                         }
                         bool FTres = bool.Parse(text.Split('☰')[1].Trim());
                         var messageRes = await botClient.SendTextMessageAsync(chatId: globalChatId, text: text.Split('☰')[0].Trim(), parseMode: ParseMode.MarkdownV2);
-                        globalDzInfo = messageRes.MessageId;
+                        globalDzInfoAdd = messageRes.MessageId;
                         if (FTres)
                         {
                             await botClient.SendTextMessageAsync(chatId: globalChatId, text: "✅Все дз заполнено, для редактирования перейдите к кнопке \"✏️Редактировать ДЗ\"");
                         }
                         else
                         {
-                            await botClient.SendTextMessageAsync(chatId: globalChatId,
+                            var messageResDel = await botClient.SendTextMessageAsync(chatId: globalChatId,
                                 text: "✏️Для добавления ДЗ введите *ID урока* или скопируйте его из сообщения выше⬆️\n" +
                                 "_*Вводите в данном формате:*_ ID урока _пробел_ ТекстДЗ\n" +
                                 "*Пример:* _2 Тут написан текст ДЗ_\n" +
-                                "_пробел_ \\- является обязательным разделителем\\!",
-                                parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.cancel);
+                                "_пробел_ \\- является обязательным разделителем\\!\n" +
+                                "_Если нет пар или Дз, выберите ↓ *\\(Текущее Дз будет удалено\\!\\)*_",
+                                parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.noDz);
+                            globalDeleteMessageCancelId = messageResDel.MessageId;
                             pressingButtons["addHomework"] = true;
                         }
                     }
@@ -1528,8 +1561,9 @@ internal class Program
             }
             #endregion
             #region Кнопка Редактировать ДЗ
-            if (message.Text.Trim() == "✏️Редактировать ДЗ")
+            if (message.Text.Trim() == "✏️Редактировать ДЗ" || message.Text.Trim().ToLower() == "/fast_edit_dz")
             {
+                pressingButtons["addHomework"] = false;//для быстрого перехода от добавления до редактирования
                 if (await buttonTest())
                 {
                     if (!await ReturnGroupName())
@@ -1544,29 +1578,32 @@ internal class Program
                             return;
                         }
 
-                        if (!await dataAvailability(0, "Homework ?", groupName: globalGroupName) || !await dataAvailability(0, "GroupDayDZ", EnglishDayThen, globalGroupName))
+                        string text = await DzInfoEdit(globalGroupName);
+                        if (text == "ОШИБКА")
                         {
-                            await clearingTables($"[{globalGroupName}_Homework]");
-
-                            if (await dataAvailability(0, "Schedule ?", EnglishDayThen, globalGroupName))
-                            {
-                                await CopyDataDz(EnglishDayThen, globalGroupName);//копируем данные расписания из расписания в дз
-                            }
-                            else
-                            {
-                                await botClient.SendTextMessageAsync(globalChatId, $"❌Расписания на завтра отсутствует или еще время до 10:00 для заполнения нового дня [3002]");
-                                return;
-                            }
+                            return;
                         }
 
-                        var messageRes = await botClient.SendTextMessageAsync(chatId: globalChatId, text: await DzInfoEdit(globalGroupName), parseMode: ParseMode.MarkdownV2);
-                        globalDzTextInfo = messageRes.MessageId;
-
-                        await botClient.SendTextMessageAsync(chatId: globalChatId, text: "✏️Для изменения ДЗ введите *ID урока* или скопируйте его из сообщения выше⬆️\n" +
-                                "_*Вводите в данном формате:*_ ID урока _пробел_ ТекстДЗ\n" +
-                                "*Пример:* _2 Тут написан текст ДЗ_\n" +
-                                "_пробел_ \\- является обязательным разделителем\\!",
-                                parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.cancel);
+                        var messageRes = await botClient.SendTextMessageAsync(chatId: globalChatId, text: text, parseMode: ParseMode.MarkdownV2);
+                        globalDzInfoEdit = messageRes.MessageId;
+                        if (message.Text.Trim() == "/fast_edit_dz")
+                        {
+                            messageRes = await botClient.SendTextMessageAsync(chatId: globalChatId, text: "✏️Для добавления Комментария/редактирования введите *ID урока* или скопируйте его из сообщения выше⬆️\n" +
+                                  "_*Вводите в данном формате:\n*_ ID урока \\(вероятнее всего всегда 1\\) _пробел_ КомментарийДЗ\n" +
+                                  "*Пример:* _1 Тут написан комментарий к ДЗ_\n" +
+                                  "_пробел_ \\- является обязательным разделителем\\!\n",
+                                  parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.cancel);
+                        }
+                        else
+                        {
+                            messageRes = await botClient.SendTextMessageAsync(chatId: globalChatId, text: "✏️Для изменения ДЗ введите *ID урока* или скопируйте его из сообщения выше⬆️\n" +
+                                   "_*Вводите в данном формате:*_ ID урока _пробел_ ТекстДЗ\n" +
+                                   "*Пример:* _2 Тут написан текст ДЗ_\n" +
+                                   "_пробел_ \\- является обязательным разделителем\\!\n" +
+                                   "_Если нет пар или Дз, выберите ↓ *\\(Текущее Дз будет удалено\\!\\)*_",
+                                   parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.noDz);
+                        }
+                        globalDeleteMessageCancelId = messageRes.MessageId;
                         pressingButtons["changeHomework"] = true;
                     }
                     else
@@ -1600,12 +1637,20 @@ internal class Program
 
                         if (await dataAvailability(0, "Homework ?", groupName: globalGroupName))
                         {
-                            var messageRes = await botClient.SendTextMessageAsync(chatId: globalChatId, text: await DzInfoEdit(globalGroupName), parseMode: ParseMode.MarkdownV2);
-                            globalDzTextInfo = messageRes.MessageId;
+                            string text = await DzInfoEdit(globalGroupName);
+                            if (text == "ОШИБКА")
+                            {
+                                return;
+                            }
 
-                            await botClient.SendTextMessageAsync(chatId: globalChatId, text: "✏️Для удаления ДЗ введите *ID урока* или скопируйте его из сообщения выше⬆️\n" +
-                                "Для удаления всего дз введите \"ВСЕ\"",
-                                    parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.cancel);
+                            var messageRes = await botClient.SendTextMessageAsync(chatId: globalChatId, text: text, parseMode: ParseMode.MarkdownV2);
+                            globalDzInfoEdit = messageRes.MessageId;
+
+                            var messageResDel = await botClient.SendTextMessageAsync(chatId: globalChatId, text: "✏️Для удаления ДЗ введите *ID урока* или скопируйте его из сообщения выше⬆️\n" +
+                                "Для удаления всего дз введите \"ВСЕ\"\n" +
+                                "_Если нет пар или Дз, выберите ↓ *\\(Текущее Дз будет удалено\\!\\)*_",
+                                parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.noDz);
+                            globalDeleteMessageCancelId = messageResDel.MessageId;
                             pressingButtons["deleteHomework"] = true;
                         }
                         else
@@ -1648,7 +1693,7 @@ internal class Program
             #region Управление новостями
             if (message.Text.Trim() == "📰Управление новостями")
             {
-                if (await dataAvailability(globalUserId, "Admins 1") || await dataAvailability(globalUserId, "Admins 2"))
+                if (await dataAvailability(globalUserId, "Admins 1") /*|| await dataAvailability(globalUserId, "Admins 2")*/)
                 {
                     await botClient.SendTextMessageAsync(
                     chatId: globalChatId,
@@ -1764,42 +1809,52 @@ internal class Program
                 {
                     return;
                 }
-                if (await dataAvailability(globalUserId, "Admins 1") || await dataAvailability(globalUserId, "Admins 2"))
+
+                string request;
+                if (await dataAvailability(globalUserId, "Admins 1"))
                 {
-                    // открытие соединения
-                    sqlConnection.Open();
-
-                    // создание объекта команды SQL
-                    using (SqlCommand command = new("SELECT user_admin_id, user_id, username, admin_type FROM Admins", sqlConnection))
-                    {
-                        // создание объекта для чтения данных
-                        using SqlDataReader reader = command.ExecuteReader();
-                        // добавление заголовка таблицы
-                        string table = "\n", tableHeader = "ID Админа║    ID Юзера   ║Тип Админа║Имя Юзера";
-
-                        int count = 0;
-                        // чтение данных из таблицы и добавление строк в таблицу
-                        while (reader.Read())
-                        {
-                            int userAdminId = reader.GetInt32(0);
-                            long userId = reader.GetInt64(1);
-                            string username = reader.GetString(2);
-                            int adminType = reader.GetInt32(3);
-
-                            table += $"     {userAdminId}        ┇`{userId}`┇           {adminType}          ┇`{await EscapeMarkdownV2(username)}`\n";
-                            count++;
-                        }
-                        // сохранение строки таблицы в переменную типа string
-                        string tableString = tableHeader + table;
-                        await botClient.SendTextMessageAsync(globalChatId, "👨‍💻*Информация о админах:* \n" + tableString, parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.tablePicture);
-                        globalTablePicture = $"4 {count} Admins";
-                    }
-                    sqlConnection.Close();
+                    request = "SELECT * FROM Admins";
+                }
+                else if (await dataAvailability(globalUserId, "Admins 2"))
+                {
+                    await botClient.SendTextMessageAsync(globalChatId, $"🔐У вас 2 тип админа, поэтому вы можете смотреть данные только о пользователях из своей группы или у которых её нет! ~[4003]");
+                    request = $"SELECT Admins.* FROM Admins INNER JOIN Users ON Admins.user_id = Users.user_id WHERE (Users.user_group = N'{globalGroupName}') OR (Users.user_group = 'НетГруппы')";
                 }
                 else
                 {
                     await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы не являетесь админом или ваш уровень недостаточен [3002]+[4003]");
+                    return;
                 }
+
+                // открытие соединения
+                sqlConnection.Open();
+                // создание объекта команды SQL
+                using (SqlCommand command = new(request, sqlConnection))
+                {
+                    // создание объекта для чтения данных
+                    using SqlDataReader reader = command.ExecuteReader();
+                    // добавление заголовка таблицы
+                    string table = "\n", tableHeader = "ID Админа║    ID Юзера   ║Тип Админа║Имя Юзера";
+
+                    int count = 0;
+                    // чтение данных из таблицы и добавление строк в таблицу
+                    while (reader.Read())
+                    {
+                        int userAdminId = reader.GetInt32(0);
+                        long userId = reader.GetInt64(1);
+                        string username = reader.GetString(2);
+                        int adminType = reader.GetInt32(3);
+
+                        table += $"     {userAdminId}        ┇`{userId}`┇           {adminType}          ┇`{await EscapeMarkdownV2(username)}`\n";
+                        count++;
+                    }
+                    // сохранение строки таблицы в переменную типа string
+                    string tableString = tableHeader + table;
+                    await botClient.SendTextMessageAsync(globalChatId, "👨‍💻*Информация о админах:* \n" + tableString, parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.tablePicture);
+                    globalTablePicture = $"4 {count} Admins";
+                }
+                sqlConnection.Close();
+
                 return;
             }
             #endregion
@@ -1810,57 +1865,67 @@ internal class Program
                 {
                     return;
                 }
-                if (await dataAvailability(globalUserId, "Admins 1") || await dataAvailability(globalUserId, "Admins 2"))
+
+                string request;
+                if (await dataAvailability(globalUserId, "Admins 1"))
                 {
-                    // открытие соединения
-                    sqlConnection.Open();
-
-                    // создание объекта команды SQL
-                    using (SqlCommand command = new("SELECT user_id, username, user_group FROM Users", sqlConnection))
-                    {
-                        // создание объекта для чтения данных
-                        using SqlDataReader reader = command.ExecuteReader();
-                        // добавление заголовка таблицы
-                        string table = "\n", tableHeader = "ID Пользователя║      Группа      ║Имя Пользователя";
-
-                        int count = 0;
-                        // чтение данных из таблицы и добавление строк в таблицу
-                        while (reader.Read())
-                        {
-                            string userId = reader.GetInt64(0).ToString();
-                            string username = reader.GetString(1);
-                            string userGroup = reader.GetString(2);
-                            if (userGroup.Length < 9)
-                            {
-                                for (int i = 0; i <= 9 - userGroup.Length; i++)
-                                {
-                                    userGroup = " " + userGroup + " ";
-                                }
-                                //userGroup = " " + userGroup;
-                            }
-                            if (userId.Length < 10)
-                            {
-                                for (int i = 0; i <= 10 - userId.Length; i++)
-                                {
-                                    userId += " ";
-                                }
-                                //userId = userId + " ";
-                            }
-
-                            table += $"    `{userId}`     ┇ `{await EscapeMarkdownV2(userGroup)}` ┇`{await EscapeMarkdownV2(username)}`\n";
-                            count++;
-                        }
-                        // сохранение строки таблицы в переменную типа string
-                        string tableString = tableHeader + table;
-                        await botClient.SendTextMessageAsync(globalChatId, "👥*Информация о пользователях:* \n" + tableString, parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.tablePicture);
-                        globalTablePicture = $"3 {count} Users";
-                    }
-                    sqlConnection.Close();
+                    request = "SELECT user_id, username, user_group FROM Users";
+                }
+                else if (await dataAvailability(globalUserId, "Admins 2"))
+                {
+                    await botClient.SendTextMessageAsync(globalChatId, $"🔐У вас 2 тип админа, поэтому вы можете смотреть данные только о пользователях из своей группы или у которых её нет! ~[4003]");
+                    request = $"SELECT user_id, username, user_group FROM Users WHERE (user_group = N'{globalGroupName}') OR (user_group = N'НетГруппы')";
                 }
                 else
                 {
                     await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы не являетесь админом или ваш уровень недостаточен [3002]+[4003]");
+                    return;
                 }
+
+                // открытие соединения
+                sqlConnection.Open();
+                // создание объекта команды SQL
+                using (SqlCommand command = new(request, sqlConnection))
+                {
+                    // создание объекта для чтения данных
+                    using SqlDataReader reader = command.ExecuteReader();
+                    // добавление заголовка таблицы
+                    string table = "\n", tableHeader = "ID Пользователя║      Группа      ║Имя Пользователя";
+
+                    int count = 0;
+                    // чтение данных из таблицы и добавление строк в таблицу
+                    while (reader.Read())
+                    {
+                        string userId = reader.GetInt64(0).ToString();
+                        string username = reader.GetString(1);
+                        string userGroup = reader.GetString(2);
+                        if (userGroup.Length < 9)
+                        {
+                            for (int i = 0; i <= 9 - userGroup.Length; i++)
+                            {
+                                userGroup = " " + userGroup + " ";
+                            }
+                            //userGroup = " " + userGroup;
+                        }
+                        if (userId.Length < 10)
+                        {
+                            for (int i = 0; i <= 10 - userId.Length; i++)
+                            {
+                                userId += " ";
+                            }
+                            //userId = userId + " ";
+                        }
+
+                        table += $"    `{userId}`     ┇ `{await EscapeMarkdownV2(userGroup)}` ┇`{await EscapeMarkdownV2(username)}`\n";
+                        count++;
+                    }
+                    // сохранение строки таблицы в переменную типа string
+                    string tableString = tableHeader + table;
+                    await botClient.SendTextMessageAsync(globalChatId, "👥*Информация о пользователях:* \n" + tableString, parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.tablePicture);
+                    globalTablePicture = $"3 {count} Users";
+                }
+                sqlConnection.Close();
+
                 return;
             }
             #endregion
@@ -1872,7 +1937,7 @@ internal class Program
                 {
                     if (await dataAvailability(globalUserId, "Admins 1") /*|| await dataAvailability(globalUserId, "Admins 2")*/)
                     {
-                        await botClient.SendTextMessageAsync(chatId: globalChatId,
+                        var messageResDel = await botClient.SendTextMessageAsync(chatId: globalChatId,
                                                             text: "✏️Для добавления новости введите её в данном формате:\n" +
                                                             "_Номер/IdНовости_ \\(_*обязательно число*_\\)\n" +
                                                             "`▒` \\(_*обязательный разделитель, нажмите для копирования*_\\)\n" +
@@ -1887,6 +1952,8 @@ internal class Program
                                                             "`▒`\n" +
                                                             "*Текст новости номер11*",
                                                             replyMarkup: Keyboards.cancel, parseMode: ParseMode.MarkdownV2);
+                        globalDeleteMessageCancelId = messageResDel.MessageId;
+
                         pressingButtons["addingNews"] = true;
                     }
                     else
@@ -1932,7 +1999,7 @@ internal class Program
                 {
                     if (await dataAvailability(globalUserId, "Admins 1") /*|| await dataAvailability(globalUserId, "Admins 2")*/)
                     {
-                        await botClient.SendTextMessageAsync(chatId: globalChatId,
+                        var messageResDel = await botClient.SendTextMessageAsync(chatId: globalChatId,
                                                             text: "✏️Для редактирования новости введите её в данном формате:\n" +
                                                             "_Номер/IdНовости_ \\(_*обязательно число*_\\)\n" +
                                                             "`▒` \\(_*обязательный разделитель, нажмите для копирования*_\\)\n" +
@@ -1948,6 +2015,8 @@ internal class Program
                                                             "*Текст новости номер11*" +
                                                             "_*Если вы хотите изменить фото новости введите*_ /update_photo_news",
                                                             replyMarkup: Keyboards.cancel, parseMode: ParseMode.MarkdownV2);
+                        globalDeleteMessageCancelId = messageResDel.MessageId;
+
                         pressingButtons["changeNews"] = true;
                     }
                     else
@@ -2171,7 +2240,13 @@ internal class Program
                 if (string.IsNullOrEmpty(userName))
                 {
                     userName = "Теперь у вас нет имени...";
-                    await botClient.SendTextMessageAsync(globalChatId, "❌Ошибка [4002]: Вы ввели имя некорректно");
+                    await botClient.SendTextMessageAsync(globalChatId, "❌Ошибка [4002]: Вы ввели имя некорректно!");
+                    return;
+                }
+                else if (await dataAvailability(0, "Users + Name", userName))
+                {
+                    await botClient.SendTextMessageAsync(globalChatId, "❌Ошибка [3003]: Данное имя пользователя уже находится в базе данных!\n" +
+                        "Пожалуйста выберите другое!");
                     return;
                 }
                 else
@@ -2207,7 +2282,7 @@ internal class Program
                 {
                     // обработка id пользователя
                     var user = userId;
-                    if (await dataAvailability(user, "Users"))
+                    if (await dataAvailability(user, "Users + Group", groupName: globalGroupName))
                     {
                         if (await dataAvailability(user, "Admins"))
                         {
@@ -2247,7 +2322,8 @@ internal class Program
                     {
                         await botClient.SendTextMessageAsync(
                          chatId: globalChatId,
-                         text: "❌Ошибка [3002]: Введенного ID Пользователя не обнаружено, проверьте правильность введённых данных.", replyMarkup: Keyboards.cancel);
+                         text: "❌Ошибка [3002]: Введенного ID Пользователя не обнаружено, проверьте правильность введённых данных!\n" +
+                         "Учтите, что у пользователя должна быть выбрана правильная группа, которая совпадает с вашей!", replyMarkup: Keyboards.cancel);
                         return;
                     }
                 }
@@ -2255,9 +2331,17 @@ internal class Program
                 {
                     // обработка имени пользователя если не удалось преобразовать в int
                     var user = message.Text.Trim();
-                    if (await dataAvailability(0, "Users Name", user))//проверяем есть ли чел
+                    if (user == "СтандартИмя" || user == "НетИмени")
                     {
-                        if (await dataAvailability(0, "Admins Name", user))
+                        await botClient.SendTextMessageAsync(
+                             chatId: globalChatId,
+                             text: "❌Ошибка [3004]: У введенного пользователя обязательно должно быть выбрано имя отличающееся от стандартного!", replyMarkup: Keyboards.cancel);
+                        pressingButtons["addAdmin"] = false;
+                        return;
+                    }
+                    if (await dataAvailability(0, "Users + Name + Group", user, globalGroupName))//проверяем есть ли чел
+                    {
+                        if (await dataAvailability(0, "Admins + Name", user))
                         {
                             await botClient.SendTextMessageAsync(
                              chatId: globalChatId,
@@ -2295,7 +2379,8 @@ internal class Program
                     {
                         await botClient.SendTextMessageAsync(
                          chatId: globalChatId,
-                         text: "❌Введенного имени Пользователя не обнаружено, проверьте правильность введённых данных", replyMarkup: Keyboards.cancel);
+                         text: "❌Ошибка [3002]: Введенного имени Пользователя не обнаружено, проверьте правильность введённых данных!\n" +
+                         "Учтите, что у пользователя должна быть выбрана правильная группа, которая совпадает с вашей!", replyMarkup: Keyboards.cancel);
                         return;
                     }
                 }
@@ -2322,14 +2407,14 @@ internal class Program
                 {
                     // обработка id пользователя
                     var user = userId;
-                    if (await dataAvailability(user, "Admins"))
+                    if (await dataAvailability(user, "Admins + Group", groupName: globalGroupName))
                     {
                         if (await dataAvailability(user, "Admins 1"))
                         {
                             await botClient.SendTextMessageAsync(
                              chatId: globalChatId,
                              text: "❌Ошибка \\[4003\\]: Введенный ID Админа является админом 1 типа и его нельзя удалить обычным способом\\.\n" +
-                             "_Для его удаления обратитесь к Главному администратору_", parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.cancel);
+                             "_Для его удаления обратитесь к Главному администратору:\n *👥Контакты*_", parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.cancel);
                             pressingButtons["deleteAdmin"] = false;
                             return;
                         }
@@ -2344,7 +2429,8 @@ internal class Program
                     {
                         await botClient.SendTextMessageAsync(
                          chatId: globalChatId,
-                         text: "❌Ошибка [3002]: Введенного ID Админа не обнаружено, проверьте правильность введённых данных", replyMarkup: Keyboards.cancel);
+                         text: "❌Ошибка [3002]: Введенного ID Админа не обнаружено, проверьте правильность введённых данных!\n" +
+                         "Учтите, что у Админа должна быть выбрана правильная группа, которая совпадает с вашей!", replyMarkup: Keyboards.cancel);
                         return;
                     }
                     sqlConnection.Open();//удаляем по id
@@ -2356,14 +2442,22 @@ internal class Program
                 {
                     // обработка имени пользователя если не удалось преобразовать в int
                     var user = message.Text.Trim();
-                    if (await dataAvailability(0, "Admins Name", user))
+                    if (user == "СтандартИмя" || user == "НетИмени")
                     {
-                        if (await dataAvailability(0, "Admins 1 Name", user))
+                        await botClient.SendTextMessageAsync(
+                             chatId: globalChatId,
+                             text: "❌Ошибка [3004]: У введенного пользователя обязательно должно быть выбрано имя отличающееся от стандартного!", replyMarkup: Keyboards.cancel);
+                        pressingButtons["deleteAdmin"] = false;
+                        return;
+                    }
+                    if (await dataAvailability(0, "Admins + Name + Group", user, globalGroupName))
+                    {
+                        if (await dataAvailability(0, "Admins 1 + Name", user))
                         {
                             await botClient.SendTextMessageAsync(
                              chatId: globalChatId,
                              text: "❌Ошибка \\[4003\\]: Введенное имя Админа является именем админа 1 типа и его нельзя удалить обычным способом\\.\n" +
-                             "_Для его удаления обратитесь к Главному администратору_", parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.cancel);
+                             "_Для его удаления обратитесь к Главному администратору:\n *👥Контакты*_", parseMode: ParseMode.MarkdownV2, replyMarkup: Keyboards.cancel);
                             pressingButtons["deleteAdmin"] = false;
                             return;
                         }
@@ -2393,7 +2487,8 @@ internal class Program
                     {
                         await botClient.SendTextMessageAsync(
                          chatId: globalChatId,
-                         text: "❌Ошибка [3002]: Введенного имени Админа не обнаружено, проверьте правильность введённых данных", replyMarkup: Keyboards.cancel);
+                         text: "❌Ошибка [3002]: Введенного имени Админа не обнаружено, проверьте правильность введённых данных!\n" +
+                         "Учтите, что у пользователя должна быть выбрана правильная группа, которая совпадает с вашей!", replyMarkup: Keyboards.cancel);
                         return;
                     }
                 }
@@ -2436,7 +2531,7 @@ internal class Program
                         {
                             if (mass.Contains(adminType))//проверяем диапазон
                             {
-                                if (await dataAvailability(adminId, "Admins"))
+                                if (await dataAvailability(adminId, "Admins + Group", groupName: globalGroupName))
                                 {
                                     sqlConnection.Open();
                                     SqlCommand updateCommand = new("UPDATE Admins SET admin_type = @adminType WHERE user_id = @adminId", sqlConnection);
@@ -2450,7 +2545,8 @@ internal class Program
                                 {
                                     await botClient.SendTextMessageAsync(
                                      chatId: globalChatId,
-                                     text: "❌Ошибка [3002]: Введенного ID Админа не обнаружено, проверьте правильность введённых данных", replyMarkup: Keyboards.cancel);
+                                     text: "❌Ошибка [3002]: Введенного ID Админа не обнаружено, проверьте правильность введённых данных!\n" +
+                                       "Учтите, что у пользователя должна быть выбрана правильная группа, которая совпадает с вашей!", replyMarkup: Keyboards.cancel);
                                     return;
                                 }
                             }
@@ -2482,13 +2578,21 @@ internal class Program
                 else
                 {
                     userName = message.Text.Trim().Split(' ')[0];//получаем имя если не удалось преобразовать в int
+                    if (userName == "СтандартИмя" || userName == "НетИмени")
+                    {
+                        await botClient.SendTextMessageAsync(
+                             chatId: globalChatId,
+                             text: "❌Ошибка [3004]: У введенного пользователя обязательно должно быть выбрано имя отличающееся от стандартного!", replyMarkup: Keyboards.cancel);
+                        pressingButtons["changeAdminType"] = false;
+                        return;
+                    }
                     try//если не получается правильно поделить по пробелам
                     {
                         if (int.TryParse(message.Text.Trim().Split(' ')[1], out adminType))//если вторая часть является int
                         {
                             if (mass.Contains(adminType))//проверяем диапазон
                             {
-                                if (await dataAvailability(0, "Admins Name", userName))
+                                if (await dataAvailability(0, "Admins + Name + Group", userName, globalGroupName))
                                 {
                                     sqlConnection.Open();
                                     SqlCommand updateCommand = new("UPDATE Admins SET admin_type = @adminType WHERE username = @adminName", sqlConnection);
@@ -2503,7 +2607,8 @@ internal class Program
                                 {
                                     await botClient.SendTextMessageAsync(
                                      chatId: globalChatId,
-                                     text: "❌Ошибка [3002]: Введенного имени Админа не обнаружено, проверьте правильность введённых данных", replyMarkup: Keyboards.cancel);
+                                     text: "❌Ошибка [3002]: Введенного имени Админа не обнаружено, проверьте правильность введённых данных!\n" +
+                                        "Учтите, что у пользователя должна быть выбрана правильная группа, которая совпадает с вашей!", replyMarkup: Keyboards.cancel);
                                     return;
                                 }
                             }
@@ -2741,7 +2846,7 @@ internal class Program
             #region Изменить звонки
             if (pressingButtons["changeCalls"] && message.Text.Trim().ToLower() != "/cancel")
             {
-                await clearingTables($"Calls");
+                await clearingTables($"[{globalGroupName}_Calls]");
                 sqlConnection.Close();
                 sqlConnection.Open();
                 string[] timeMass;
@@ -2823,7 +2928,7 @@ internal class Program
                         {
                             Time = Time.Replace("│", "╛");
                         }
-                        SqlCommand insertCommand = new("INSERT into Calls(time_interval, note) values (@time_interval, @note)", sqlConnection);//добавляем
+                        SqlCommand insertCommand = new($"INSERT into [{globalGroupName}_Calls](time_interval, note) values (@time_interval, @note)", sqlConnection);//добавляем
                         insertCommand.Parameters.AddWithValue("@time_interval", Time);
                         insertCommand.Parameters.AddWithValue("@note", comment);
                         insertCommand.ExecuteNonQuery();
@@ -2837,6 +2942,7 @@ internal class Program
                 }
                 sqlConnection.Close();
                 await botClient.SendTextMessageAsync(globalChatId, $"✅Звонки успешно добавлены!");
+                await DzBaseChat(globalGroupName, true);
                 pressingButtons["changeCalls"] = false;
                 return;
             }
@@ -2878,7 +2984,7 @@ internal class Program
                     await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [3001]: Текст введен некорректно", replyMarkup: Keyboards.cancel);
                     return;
                 }
-                await clearingTables($"[{globalGroupName}_Homework]");
+                await FullDeleteDz(globalGroupName);
                 await clearingTables($"[{globalGroupName}_{EnglishDay}_Schedule]");
                 sqlConnection.Close();
                 sqlConnection.Open();
@@ -3020,7 +3126,7 @@ internal class Program
                     {
                         if (weekDays.TryGetValue(RussiansDay, out EnglishDay))
                         {
-                            rowsAffected += await clearingTables($"[{globalGroupName}_Homework]");
+                            rowsAffected += await FullDeleteDz(globalGroupName);
                             rowsAffected += await clearingTables($"[{globalGroupName}_{EnglishDay}_Schedule]");
                         }
                         else
@@ -3038,7 +3144,7 @@ internal class Program
                         return;
                     }
 
-                    rowsAffected += await clearingTables($"[{globalGroupName}_Homework]");
+                    rowsAffected += await FullDeleteDz(globalGroupName);
                     rowsAffected += await clearingTables($"[{globalGroupName}_{EnglishDay}_Schedule]");
                 }
                 sqlConnection.Close();
@@ -3145,15 +3251,32 @@ internal class Program
                     pressingButtons["addHomework"] = false;
                     return;
                 }
-                if (globalDzInfo == 0)//проверка, можно ли отредактировать сообщение
+                if (globalDzInfoAdd == 0)//проверка, можно ли отредактировать сообщение
                 {
                     var messageRes = await botClient.SendTextMessageAsync(chatId: globalChatId, text: textDzInfoAdd.Split('☰')[0].Trim(), parseMode: ParseMode.MarkdownV2);
-                    globalDzInfo = messageRes.MessageId;
+                    globalDzInfoAdd = messageRes.MessageId;
                 }
                 else
                 {
-                    await botClient.EditMessageTextAsync(globalChatId, globalDzInfo, text: textDzInfoAdd.Split('☰')[0].Trim(), parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                    try
+                    {
+                        await botClient.EditMessageTextAsync(globalChatId, globalDzInfoAdd, text: textDzInfoAdd.Split('☰')[0].Trim(), parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                    }
+                    catch { }
                 }
+                if (globalDzInfoEdit != 0)//проверка, можно ли отредактировать сообщение Редактирования дз если оно было недавно
+                {
+                    try
+                    {
+                        string text = await DzInfoEdit(globalGroupName);
+                        if (text != "ОШИБКА")
+                        {
+                            await botClient.EditMessageTextAsync(globalChatId, globalDzInfoEdit, text: text.Trim(), parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                        }
+                    }
+                    catch { }
+                }
+                await ReturnImageDz();
                 await DzBaseChat(globalGroupName, true);
                 //pressingButtons["addHomework"] = false;
                 return;
@@ -3227,20 +3350,33 @@ internal class Program
                     pressingButtons["changeHomework"] = false;
                     return;
                 }
-                if (globalDzTextInfo == 0)//проверка, можно ли отредактировать сообщение
+                if (globalDzInfoEdit == 0)//проверка, можно ли отредактировать сообщение
                 {
                     var messageRes = await botClient.SendTextMessageAsync(chatId: globalChatId, text: textDzInfoEdit, parseMode: ParseMode.MarkdownV2);
-                    globalDzTextInfo = messageRes.MessageId;
+                    globalDzInfoEdit = messageRes.MessageId;
                 }
                 else
                 {
                     try
                     {
-                        await botClient.EditMessageTextAsync(globalChatId, globalDzTextInfo, text: textDzInfoEdit, parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                        await botClient.EditMessageTextAsync(globalChatId, globalDzInfoEdit, text: textDzInfoEdit, parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                    }
+                    catch { }
+                }
+                if (globalDzInfoAdd != 0)//проверка, можно ли отредактировать сообщение Добавления дз если оно было недавно
+                {
+                    try
+                    {
+                        string text = await DzInfoAdd(globalGroupName);
+                        if (text != "ОШИБКА")
+                        {
+                            await botClient.EditMessageTextAsync(globalChatId, globalDzInfoAdd, text: text.Split('☰')[0].Trim(), parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                        }
                     }
                     catch { }
                 }
                 //pressingButtons["changeHomework"] = false;
+                await ReturnImageDz();
                 await DzBaseChat(globalGroupName, true);
                 return;
             }
@@ -3259,7 +3395,7 @@ internal class Program
                 sqlConnection.Open();
                 if (message.Text.Trim().ToUpper() == "ВСЕ" || message.Text.Trim().ToUpper() == "ВСЁ")//проверяем что ввел пользователь, т.е удалить все или по выбранному
                 {
-                    rowsAffected = await clearingTables($"[{globalGroupName}_Homework]");
+                    rowsAffected = await FullDeleteDz(globalGroupName);
                 }
                 else//по выбранному
                 {
@@ -3285,20 +3421,33 @@ internal class Program
                     pressingButtons["deleteHomework"] = false;
                     return;
                 }
-                if (globalDzTextInfo == 0)//проверка, можно ли отредактировать сообщение
+                if (globalDzInfoEdit == 0)//проверка, можно ли отредактировать сообщение
                 {
                     var messageRes = await botClient.SendTextMessageAsync(chatId: globalChatId, text: textDzInfoEdit, parseMode: ParseMode.MarkdownV2);
-                    globalDzTextInfo = messageRes.MessageId;
+                    globalDzInfoEdit = messageRes.MessageId;
                 }
                 else
                 {
                     try
                     {
-                        await botClient.EditMessageTextAsync(globalChatId, globalDzTextInfo, text: textDzInfoEdit, parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                        await botClient.EditMessageTextAsync(globalChatId, globalDzInfoEdit, text: textDzInfoEdit, parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                    }
+                    catch { }
+                }
+                if (globalDzInfoAdd != 0)//проверка, можно ли отредактировать сообщение Добавления дз если оно было недавно
+                {
+                    try
+                    {
+                        string text = await DzInfoAdd(globalGroupName);
+                        if (text != "ОШИБКА")
+                        {
+                            await botClient.EditMessageTextAsync(globalChatId, globalDzInfoAdd, text: text.Split('☰')[0].Trim(), parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                        }
                     }
                     catch { }
                 }
                 pressingButtons["deleteHomework"] = false;
+                await ReturnImageDz();
                 await DzBaseChat(globalGroupName, true);
                 return;
             }
@@ -3387,22 +3536,13 @@ internal class Program
             if (string.IsNullOrWhiteSpace(callbackData?.Trim())) return;
             if (callbackData == "cancel")//если "отменить" то во всем массиве кнопок делаем их false
             {
-                await Cancel();
-            }
-            else if (callbackData == "GroupCancel")
-            {
-                if (globalGroupChangeId != 0)
-                {
-                    await botClient.DeleteMessageAsync(globalChatId, globalGroupChangeId);
-                    await botClient.SendTextMessageAsync(globalChatId, "🚫Отменено");
-                }
+                await Cancel(messageDelete: true);
             }
             else if (callbackData.Split(' ')[0].Trim() == "Group")
             {
-                if (globalGroupChangeId != 0)
-                {
-                    await botClient.DeleteMessageAsync(globalChatId, globalGroupChangeId);
-                }
+                await DeleteMessage(globalDeleteMessageCancelId);
+                globalDeleteMessageCancelId = 0;
+
                 string userGroup = callbackData.Split(' ')[1].Trim();
                 sqlConnection.Close();
                 sqlConnection.Open();
@@ -3424,7 +3564,7 @@ internal class Program
             }
             else
             {
-                if (await buttonTest())//проверяем все ли действия выполнены т.е все ли кнопки в массиве false
+                if (await buttonTest() || (callbackData == "noPairs" || callbackData == "noDZ"))//проверяем все ли действия выполнены т.е все ли кнопки в массиве false
                 {
                     switch (callbackData)//остальные кнопки
                     {
@@ -3442,7 +3582,8 @@ internal class Program
                             break;
                         case "updateName":
                             // Обрабатываем нажатие на кнопку "Изменить имя"
-                            await botClient.SendTextMessageAsync(globalChatId, "✏️Введите новое имя:", replyMarkup: Keyboards.cancel);
+                            var messageResDel = await botClient.SendTextMessageAsync(globalChatId, "✏️Введите новое имя _\\(Желательно ник TG, Без @\\)_:", replyMarkup: Keyboards.cancel, parseMode: ParseMode.MarkdownV2);
+                            globalDeleteMessageCancelId = messageResDel.MessageId;
                             pressingButtons["changeNameFT"] = true;
                             break;
                         case "addPicture":
@@ -3539,6 +3680,69 @@ internal class Program
                             // Создаем объект  таймера
                             await TimerBot(10);
                             break;
+                        case "noPairs":
+                            if (await dataAvailability(globalUserId, "Admins") || await dataAvailability(globalChatId, "Admins"))
+                            {
+                                await NoDz("⊗ Отмена Пар");
+                            }
+                            else
+                            {
+                                await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы не являетесь админом [3002]+[4003]");
+                                return;
+                            }
+                            break;
+                        case "noDZ":
+                            if (await dataAvailability(globalUserId, "Admins") || await dataAvailability(globalChatId, "Admins"))
+                            {
+                                await NoDz("⊗ Нет Дз");
+                            }
+                            else
+                            {
+                                await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы не являетесь админом [3002]+[4003]");
+                                return;
+                            }
+                            break;
+                        case "addComment":
+                            await botClient.SendTextMessageAsync(globalChatId, "✏️Для добавления комментария нажмите: /fast_edit_dz");
+                            break;
+                        case "confirm":
+                            switch (globalConfirmValue)
+                            {
+                                case "CallsDelete":
+                                    if (await dataAvailability(globalUserId, "Admins") || await dataAvailability(globalChatId, "Admins"))
+                                    {
+                                        int rowsAffected = await clearingTables($"[{globalGroupName}_Calls]"); ;//просто удаляем все звонки
+
+                                        await botClient.SendTextMessageAsync(chatId: globalChatId,
+                                        text: $"✅Произведено удаление *Звонков*, удалено записей: _{rowsAffected}_",
+                                        parseMode: ParseMode.MarkdownV2);
+
+                                        if (globalCullsInfoEditId != 0)//проверка, можно ли отредактировать сообщение
+                                        {
+                                            try
+                                            {
+                                                string[] calls = await CallsInfo(globalGroupName);
+                                                await botClient.EditMessageTextAsync(globalChatId, globalCullsInfoEditId, text: calls[0], parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                                            }
+                                            catch { }
+                                        }
+
+                                        await DeleteMessage(globalDeleteMessageCancelId);
+                                        globalDeleteMessageCancelId = 0;
+                                    }
+                                    else
+                                    {
+                                        await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы не являетесь админом [3002]+[4003]");
+                                        return;
+                                    }
+                                    break;
+                                default:
+                                    // Обрабатываем неизвестные данные обратного вызова
+                                    await botClient.SendTextMessageAsync(globalChatId, "🚫Действие более недействительно! [1300]");
+                                    break;
+                            }
+                            globalConfirmValue = "";
+                            break;
                         case "tablePicture"://обработка таблиц и т.п для отображения картинок
 #pragma warning disable CA1416 // Проверка совместимости платформы
 
@@ -3556,7 +3760,6 @@ internal class Program
                             }
                             else
                             {
-
                                 // Создание изображения таблицы
                                 Bitmap image = new(desiredWidth, desiredHeight); // width и height изо
                                 Graphics graphics = Graphics.FromImage(image);
@@ -3578,9 +3781,25 @@ internal class Program
                                 switch (Table)//что мы будем рисовать
                                 {
                                     case "Users":
+                                        string requestUs;
+                                        if (await dataAvailability(globalUserId, "Admins 1") || await dataAvailability(globalChatId, "Admins 1"))
+                                        {
+                                            requestUs = "SELECT user_id, username, user_group FROM Users";
+                                        }
+                                        else if (await dataAvailability(globalUserId, "Admins 2") || await dataAvailability(globalChatId, "Admins 2"))
+                                        {
+                                            await botClient.SendTextMessageAsync(globalChatId, $"🔐У вас 2 тип админа, поэтому вы можете смотреть данные только о пользователях из своей группы или у которых её нет! ~[4003]");
+                                            requestUs = $"SELECT user_id, username, user_group FROM Users WHERE (user_group = N'{globalGroupName}') OR (user_group = N'НетГруппы')";
+                                        }
+                                        else
+                                        {
+                                            await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы не являетесь админом или ваш уровень недостаточен [3002]+[4003]");
+                                            return;
+                                        }
                                         Text = "👥*Информация о пользователях:*";
                                         // создание объекта команды SQL
-                                        using (SqlCommand command = new("SELECT user_id, username, user_group FROM Users", sqlConnection))
+                                        sqlConnection.Open();
+                                        using (SqlCommand command = new(requestUs, sqlConnection))
                                         {
                                             // создание объекта для чтения данных
                                             using SqlDataReader reader = command.ExecuteReader();
@@ -3647,9 +3866,25 @@ internal class Program
                                         }
                                         break;
                                     case "Admins":
+                                        string requestAd;
+                                        if (await dataAvailability(globalUserId, "Admins 1") || await dataAvailability(globalChatId, "Admins 1"))
+                                        {
+                                            requestAd = "SELECT * FROM Admins";
+                                        }
+                                        else if (await dataAvailability(globalUserId, "Admins 2") || await dataAvailability(globalChatId, "Admins 2"))
+                                        {
+                                            await botClient.SendTextMessageAsync(globalChatId, $"🔐У вас 2 тип админа, поэтому вы можете смотреть данные только о пользователях из своей группы или у которых её нет! ~[4003]");
+                                            requestAd = $"SELECT Admins.* FROM Admins INNER JOIN Users ON Admins.user_id = Users.user_id WHERE (Users.user_group = N'{globalGroupName}') OR (Users.user_group = 'НетГруппы')";
+                                        }
+                                        else
+                                        {
+                                            await botClient.SendTextMessageAsync(globalChatId, $"🔐Увы, но вы не являетесь админом или ваш уровень недостаточен [3002]+[4003]");
+                                            return;
+                                        }
                                         Text = "👥*Информация о пользователях:*";
                                         // создание объекта команды SQL
-                                        using (SqlCommand command = new("SELECT user_admin_id, user_id, username, admin_type FROM Admins", sqlConnection))
+                                        sqlConnection.Open();
+                                        using (SqlCommand command = new(requestAd, sqlConnection))
                                         {
                                             // создание объекта для чтения данных
                                             using SqlDataReader reader = command.ExecuteReader();
@@ -3898,6 +4133,12 @@ internal class Program
 
                                         break;
                                     case "Calls":
+                                        if (!await dataAvailability(0, "Calls ?", groupName: globalGroupName))
+                                        {
+                                            await botClient.SendTextMessageAsync(chatId: globalChatId,
+                                            text: "⏲Расписания звонков пока _нет_ \\[3002\\]", parseMode: ParseMode.MarkdownV2);
+                                            return;
+                                        }
                                         desiredWidth = Width * 144;
                                         desiredHeight = (Height + 1) * 200;
                                         lengthLine = 50;
@@ -3909,207 +4150,72 @@ internal class Program
                                         graphics.DrawRectangle(pen, lengthLine, lengthLine, desiredWidth - lengthLine * 2, desiredHeight - lengthLine * 2);// Нарисуем границу
                                         graphics.DrawRectangle(pen, lengthLine / 2, lengthLine / 2, desiredWidth - lengthLine, desiredHeight - lengthLine);
 
+                                        string[] calls = await CallsInfo(globalGroupName, true);
+                                        calls = calls[0].Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
                                         string Calls = "";
                                         textWidth = 90;//изначальный отступ
-                                        SqlCommand commandCalls = new("SELECT time_interval FROM Calls", sqlConnection);
-                                        SqlDataReader readerCalls = commandCalls.ExecuteReader();
-                                        while (readerCalls.Read())//считываем звонки из базы
+
+                                        for (int i = 1; i < calls.Length; i++)
                                         {
-                                            string time = readerCalls.GetString(readerCalls.GetOrdinal("time_interval"));
-                                            Calls = $"{time}";//составляем сообщение
+                                            Calls = calls[i];//составляем сообщение
                                             textWidth += 120;
                                             brush = new SolidBrush(System.Drawing.Color.Aqua);
                                             graphics.DrawString(Calls, font, brush, 300, textWidth);
                                         }
-                                        readerCalls.Close();
 
                                         Text = "🛎*Расписание звонков:*";//текст под картинкой
                                         brush = new SolidBrush(System.Drawing.Color.Green);
                                         font = new Font("Arial", 55, FontStyle.Bold);
-                                        graphics.DrawString("☏Расписание звонков ВКЭ", font, brush, 150, 90);//последний текст который будет сверху
+                                        graphics.DrawString($"☏Расписание звонков {globalGroupName}", font, brush, 150, 90);//последний текст который будет сверху
                                         break;
                                     case "Homework":
-                                        /*if (!await ReturnGroupName())
+                                        byte[] imgMass = null;
+                                        SqlCommand commandImgDz = new("SELECT image_Dz FROM Groups WHERE group_Name = @groupName", sqlConnection);
+                                        commandImgDz.Parameters.AddWithValue("@groupName", globalGroupName);
+                                        SqlDataReader readerImg = commandImgDz.ExecuteReader();
+                                        if (readerImg.Read())
                                         {
-                                            return;
-                                        }*/
-                                        string[] Culls = new string[8];
-                                        if (await dataAvailability(0, "Calls ?"))//проверяем есть ли вообще звонки в базе
-                                        {
-                                            sqlConnection.Open();
-                                            SqlCommand command = new("SELECT time_interval FROM Calls", sqlConnection);
-                                            SqlDataReader reader = command.ExecuteReader();
-                                            int count = 0;
-                                            while (reader.Read())//считываем звонки из базы
+                                            // Получаем изо из базы для дз
+                                            if (readerImg is not null && !readerImg.IsDBNull(readerImg.GetOrdinal("image_Dz")))
                                             {
-                                                try
-                                                {
-                                                    string time = reader.GetString(reader.GetOrdinal("time_interval"));
-                                                    time = await RemoveDigitsAsync(time);
-                                                    time = time.Remove(time.Length - 2) + ":";
-                                                    Culls[count] = time;
-                                                }
-                                                catch { }
-                                                count++;
+                                                imgMass = (byte[])readerImg["image_Dz"];
+                                                image = new Bitmap(new MemoryStream(imgMass));
                                             }
-                                            reader.Close();
-                                            sqlConnection.Close();
                                         }
-
-                                        await WhatWeekType();
                                         sqlConnection.Close();
-                                        float textWidthF = 195f;
-                                        string imagePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "backgroundDz.png");
-                                        image = new Bitmap(imagePath); // обновляю изо
-                                        graphics = Graphics.FromImage(image);
-                                        font = new Font("Cascadia Mono", 20, FontStyle.Bold);
-                                        Font fontHomework = new("Cascadia Mono", 20, FontStyle.Regular);
-                                        Font fontCulls = new("Cascadia Mono", 14, FontStyle.Regular);
-                                        Font fontText = new("Cascadia Mono", 26, FontStyle.Bold);
-                                        brush = new SolidBrush(System.Drawing.Color.White);
-                                        SolidBrush brushText = new(System.Drawing.Color.FromArgb(214, 155, 131));
-                                        SolidBrush brushNumbers = new(System.Drawing.Color.FromArgb(181, 206, 168));
-                                        SolidBrush brushLesson = new(System.Drawing.Color.FromArgb(216, 160, 222));
-                                        Point day = new(670, 42);
-                                        Point weekValue = new(483, 138);
-                                        Point Date = new(370, 195);
-                                        Point Dz = new(210, 245);
-                                        StringFormat stringFormat = new()
+
+                                        if (imgMass == null)
                                         {
-                                            Alignment = StringAlignment.Near,
-                                            LineAlignment = StringAlignment.Near,
-                                            Trimming = StringTrimming.Word
-                                        };
-
-                                        if (await ReturnDayWeek(true))
-                                        {
-                                            await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [1003]", replyMarkup: Keyboards.cancel);
-                                            graphics.Dispose();// Освободите ресурсы
-                                            image.Dispose();
-                                            return;
-                                        }
-
-                                        if (await dataAvailability(0, "Homework ?", EnglishDayThen))//проверяю есть ли вообще дз в базе
-                                        {
-                                            Text = $"\"{RussianDayThen.ToUpper()}\"";
-                                            graphics.DrawString(Text, fontText, brushText, day);
-                                            textSize = graphics.MeasureString(Text, fontText, image.Width, stringFormat);
-                                            graphics.DrawString(")", fontText, brush, 670 + textSize.Width, 42);
-
-                                            Text = $"\"{weekType}\"";
-                                            graphics.DrawString(Text, fontText, brushText, weekValue);
-                                            textSize = graphics.MeasureString(Text, fontText, image.Width, stringFormat);
-                                            graphics.DrawString(";", fontText, brush, 483 + textSize.Width, 138);
-
-                                            Text = $"{DateDayThen}";
-                                            graphics.DrawString(Text, fontText, brushNumbers, Date);
-                                            textSize = graphics.MeasureString(Text, fontText, image.Width, stringFormat);
-                                            graphics.DrawString(";", fontText, brush, 370 + textSize.Width, 195);
-
-                                            // открытие соединения
-                                            sqlConnection.Open();
-
-                                            // создание команды для выполнения SQL-запроса с JOIN-ом таблиц
-                                            string queryHome = @$"SELECT lesson_name, homework 
-                                                                 FROM [{globalGroupName}_Homework]";
-                                            SqlCommand commandPicDz = new(queryHome, sqlConnection);
-
-                                            // создание объекта SqlDataReader для чтения данных
-                                            using (SqlDataReader reader = commandPicDz.ExecuteReader())
+                                            object[] imgObg = await ReturnImageDz();
+                                            if ((bool)imgObg[0] == true)
                                             {
-                                                SizeF homeworkSize = graphics.MeasureString(Text, fontHomework, image.Width, stringFormat);
-                                                SizeF lessonSize = graphics.MeasureString(Text, font, image.Width, stringFormat);
-                                                SizeF lessonCulls = graphics.MeasureString(Text, fontCulls, image.Width, stringFormat);
-                                                Text = "";
-                                                int count = 0;
-                                                while (reader.Read())
-                                                {
-                                                    string culls;
-                                                    if (Culls[count] != null && !string.IsNullOrWhiteSpace(Culls[count]))
-                                                    {
-                                                        culls = Culls[count];
-                                                    }
-                                                    else
-                                                    {
-                                                        culls = "???";
-                                                    }
-                                                    string lesson_name, homework;
-                                                    // чтение значений из текущей строки таблицы
-                                                    lesson_name = (string)reader["lesson_name"];
-                                                    try
-                                                    {
-                                                        homework = (string)reader["homework"] + ";";
-                                                    }
-                                                    catch//если поле пустое, то записываем ничего
-                                                    {
-                                                        homework = " ✘ ";
-                                                    }
-
-                                                    try
-                                                    {
-                                                        lesson_name1 = lesson_name.Trim().Split('≣')[0].Trim(); lesson_name2 = lesson_name.Trim().Split('≣')[1].Trim();
-                                                        if (!string.IsNullOrWhiteSpace(lesson_name1) && !string.IsNullOrWhiteSpace(lesson_name2))//если поделились но пустые или специально пустые
-                                                        {
-                                                            if (weekType == "Числитель")
-                                                            {
-                                                                lesson_name = lesson_name1;
-                                                            }
-                                                            else
-                                                            {
-                                                                lesson_name = lesson_name2;
-                                                            }
-                                                        }
-                                                    }
-                                                    catch { }
-
-                                                    textWidthF += homeworkSize.Height + 5;
-                                                    // Определение размеров текста
-                                                    homeworkSize = graphics.MeasureString(homework, fontHomework, image.Width, stringFormat);
-                                                    lessonSize = graphics.MeasureString(lesson_name, font, image.Width, stringFormat);
-                                                    lessonCulls = graphics.MeasureString(culls, fontCulls, image.Width, stringFormat);
-
-                                                    if (textWidthF + lessonSize.Height + 5 + homeworkSize.Height > image.Height - 50)
-                                                    {
-                                                        await botClient.SendTextMessageAsync(globalChatId, $"*❌Ошибка [1001]:* К сожалению весь текст дз не помещается на картинке", parseMode: ParseMode.MarkdownV2);
-                                                        // Освободите ресурсы
-                                                        graphics.Dispose();
-                                                        image.Dispose();
-                                                        // return;
-                                                    }
-
-                                                    // Рисование текста с переносом
-                                                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                                                    if (homeworkSize.Width >= image.Width - 200)
-                                                    {
-                                                        homeworkSize = graphics.MeasureString(await transferText(homework, 41), fontHomework, image.Width, stringFormat);
-
-                                                        graphics.DrawString(lesson_name, font, brushLesson, 205, textWidthF);
-                                                        graphics.DrawString(culls, fontCulls, brushNumbers, 205 + lessonSize.Width + 1, textWidthF + 5);
-                                                        textWidthF += lessonSize.Height + 5;
-                                                        graphics.DrawString(await transferText(homework, 41), fontHomework, brush, 205, textWidthF);
-                                                    }
-                                                    else
-                                                    {
-                                                        graphics.DrawString(lesson_name, font, brushLesson, 205, textWidthF /*+ 40*/);
-                                                        graphics.DrawString(culls, fontCulls, brushNumbers, 205 + lessonSize.Width + 1, textWidthF + 5);
-                                                        graphics.DrawString(" " + homework, fontHomework, brush, 205, textWidthF + 40);
-                                                        textWidthF += 40;
-                                                    }
-                                                    count++;
-                                                    // ТАК НАДО
-                                                }
+                                                imgMass = (byte[])imgObg[3];
+                                                image = new Bitmap(new MemoryStream(imgMass));
+                                                Text = (string)imgObg[2];
                                             }
-                                            sqlConnection.Close();
-                                            Text = "*🏠Дз на завтра: *";
                                         }
                                         else
                                         {
+                                            if (await dataAvailability(0, "Homework ~ noDz", groupName: globalGroupName))//если нет дз
+                                            {
+                                                Text = "*💤На завтра нет Дз\\!🎉*";
+                                            }
+                                            else if (await dataAvailability(0, "Homework ~ noPairs", groupName: globalGroupName))//если нет пар
+                                            {
+                                                Text = "*💤Завтра нет пар\\!🎉*";
+                                            }
+                                            else
+                                            {
+                                                Text = "*🏠Дз на завтра:*";
+                                            }
+                                        }
+
+                                        if (imgMass == null)//если по итогу нет изо
+                                        {
                                             await botClient.SendTextMessageAsync(globalChatId, $"❌*Извините, но дз для дня _\"{RussianDayThen.ToUpper()}\"_ еще не заполнено `[3002]`*", parseMode: ParseMode.MarkdownV2);
-                                            // Освободите ресурсы
-                                            graphics.Dispose();
-                                            image.Dispose();
                                             return;
                                         }
+                                        
                                         break;
                                     default://если нет данных то ошибка в виде изо
                                         lengthLine = 10;
@@ -4174,11 +4280,11 @@ internal class Program
             SqlCommand selectCommand;
             switch (table)//в зависимости от действия задаем в переменную selectCommand различные команды
             {
-                case "Admins Name":
+                case "Admins + Name":
                     selectCommand = new SqlCommand("SELECT * FROM Admins WHERE username = @userName", sqlConnection);
                     selectCommand.Parameters.AddWithValue("@userName", value);
                     break;
-                case "Admins 1 Name":
+                case "Admins 1 + Name":
                     selectCommand = new SqlCommand("SELECT * FROM Admins WHERE username = @userName AND admin_type = @adminType", sqlConnection);
                     selectCommand.Parameters.AddWithValue("@userName", value);
                     selectCommand.Parameters.AddWithValue("@adminType", 1);
@@ -4186,6 +4292,16 @@ internal class Program
                 case "Admins":
                     selectCommand = new SqlCommand("SELECT * FROM Admins WHERE user_id = @userId", sqlConnection);
                     selectCommand.Parameters.AddWithValue("@userId", ID);
+                    break;
+                case "Admins + Group":
+                    selectCommand = new SqlCommand("SELECT Admins.* FROM Admins INNER JOIN Users ON Admins.user_id = Users.user_id WHERE (Users.user_group = @groupName) AND (Admins.user_id = @userId)", sqlConnection);
+                    selectCommand.Parameters.AddWithValue("@userId", ID);
+                    selectCommand.Parameters.AddWithValue("@groupName", groupName);
+                    break;
+                case "Admins + Name + Group":
+                    selectCommand = new SqlCommand("SELECT .Admins.* FROM Admins INNER JOIN Users ON Admins.user_id = Users.user_id WHERE (Users.user_group = @groupName) AND (Admins.username = @userName)" /*OR (Users.username = @userName)"*/, sqlConnection);
+                    selectCommand.Parameters.AddWithValue("@userName", value);
+                    selectCommand.Parameters.AddWithValue("@groupName", groupName);
                     break;
                 case "Admins 1":
                 case "Admins 2":
@@ -4198,9 +4314,19 @@ internal class Program
                     selectCommand = new SqlCommand("SELECT * from Users WHERE user_id = @userId", sqlConnection);
                     selectCommand.Parameters.AddWithValue("@userId", ID);
                     break;
-                case "Users Name":
+                case "Users + Group":
+                    selectCommand = new SqlCommand("SELECT * from Users WHERE user_id = @userId AND user_group = @groupName", sqlConnection);
+                    selectCommand.Parameters.AddWithValue("@userId", ID);
+                    selectCommand.Parameters.AddWithValue("@groupName", groupName);
+                    break;
+                case "Users + Name":
                     selectCommand = new SqlCommand("SELECT * from Users WHERE username = @userName", sqlConnection);
                     selectCommand.Parameters.AddWithValue("@userName", value);
+                    break;
+                case "Users + Name + Group":
+                    selectCommand = new SqlCommand("SELECT * from Users WHERE username = @userName AND user_group = @groupName", sqlConnection);
+                    selectCommand.Parameters.AddWithValue("@userName", value);
+                    selectCommand.Parameters.AddWithValue("@groupName", groupName);
                     break;
                 case "News ?":
                     selectCommand = new SqlCommand("SELECT count(*) from News", sqlConnection);
@@ -4210,7 +4336,7 @@ internal class Program
                     selectCommand.Parameters.AddWithValue("@newsNumber", ID);
                     break;
                 case "Calls ?":
-                    selectCommand = new SqlCommand("SELECT count(*) from Calls", sqlConnection);
+                    selectCommand = new SqlCommand($"SELECT count(*) from [{groupName}_Calls]", sqlConnection);
                     break;
                 case "Homework ?":
                     selectCommand = new SqlCommand($"SELECT count(*) from [{groupName}_Homework]", sqlConnection);
@@ -4219,13 +4345,19 @@ internal class Program
                     selectCommand = new SqlCommand($"SELECT count(*) from [{groupName}_Homework] WHERE id_Homework = @idHomework", sqlConnection);
                     selectCommand.Parameters.AddWithValue("@idHomework", ID);
                     break;
+                case "Homework ~ noDz":
+                    selectCommand = new SqlCommand($"SELECT count(*) FROM [{groupName}_Homework] WHERE (lesson_name = N'⠀⊗ Нет Дз')", sqlConnection);
+                    break;
+                case "Homework ~ noPairs":
+                    selectCommand = new SqlCommand($"SELECT count(*) FROM [{groupName}_Homework] WHERE (lesson_name = N'⠀⊗ Отмена Пар')", sqlConnection);
+                    break;
                 case "Schedule ?":
                     selectCommand = new SqlCommand($"SELECT count(*) from [{groupName}_{value}_Schedule]", sqlConnection);
                     break;
                 case "GroupName ?":
-                    selectCommand = new SqlCommand("SELECT count(*) FROM Users WHERE user_id = @userId AND user_group = @userGroup", sqlConnection);
+                    selectCommand = new SqlCommand("SELECT count(*) FROM Users WHERE user_id = @userId AND user_group = @groupName", sqlConnection);
                     selectCommand.Parameters.AddWithValue("@userId", ID);
-                    selectCommand.Parameters.AddWithValue("@userGroup", groupName);
+                    selectCommand.Parameters.AddWithValue("@groupName", groupName);
                     break;
                 case "Groups ?":
                     selectCommand = new SqlCommand($"SELECT count(*) FROM Groups WHERE group_Name = @groupName", sqlConnection);
@@ -4360,6 +4492,11 @@ internal class Program
                 }
             }
             sqlConnection.Close();
+            if (globalUsername == "СтандартИмя" || globalUsername == "НетИмени")
+            {
+                await botClient.SendTextMessageAsync(globalChatId, "❕Нам не удалось считать ваше _имя_, пожалуйста добавьте его _\\(Желательно ник TG, Без @\\)_ в своем *профиле* для возможной связи\\!\n" +
+                    "✏️Для изменения имени нажмите *📝Изменить имя*", replyMarkup: Keyboards.MainMenu, parseMode: ParseMode.MarkdownV2);
+            }
             return messageInfo;//и возвращаем его
         }
 
@@ -4523,11 +4660,9 @@ internal class Program
                     }
                     catch
                     {
-                        try
-                        {
-                            await botClient.DeleteMessageAsync(globalChatId, globalMessagePhotoId);
-                        }
-                        catch { }
+                        await DeleteMessage(globalMessagePhotoId);
+                        globalMessagePhotoId = 0;
+
                         if (!ImageIsNull)
                         {
                             var messageRes = await botClient.SendPhotoAsync(
@@ -4564,7 +4699,7 @@ internal class Program
             sqlConnection.Close();
         }
 
-        async Task Cancel(bool changeAllValues = false, bool messageEnabled = true)
+        async Task Cancel(bool changeAllValues = false, bool messageEnabled = true, bool messageDelete = false)
         {
             foreach (string key in pressingButtons.Keys)
             {
@@ -4576,6 +4711,11 @@ internal class Program
             if (messageEnabled)
             {
                 await botClient.SendTextMessageAsync(globalChatId, "🚫Отменено");
+            }
+            if (messageDelete)
+            {
+                await DeleteMessage(globalDeleteMessageCancelId);
+                globalDeleteMessageCancelId = 0;
             }
         }
 
@@ -4589,7 +4729,7 @@ internal class Program
 
             if (!await dataAvailability(0, "Homework ?", groupName: globalGroupName) || !await dataAvailability(0, "GroupDayDZ", EnglishDayThen, globalGroupName))
             {
-                await clearingTables($"[{globalGroupName}_Homework]");//просто удаляем всё дз уже прошедшего дня
+                await FullDeleteDz(globalGroupName);//просто удаляем всё дз уже прошедшего дня
 
                 if (await dataAvailability(0, "Schedule ?", EnglishDayThen, globalGroupName))
                 {
@@ -4670,7 +4810,7 @@ internal class Program
 
             if (!await dataAvailability(0, "Homework ?", groupName: globalGroupName) || !await dataAvailability(0, "GroupDayDZ", EnglishDayThen, globalGroupName))
             {
-                await clearingTables($"[{globalGroupName}_Homework]");//просто удаляем всё дз уже прошедшего дня
+                await FullDeleteDz(globalGroupName);//просто удаляем всё дз уже прошедшего дня
 
                 if (await dataAvailability(0, "Schedule ?", EnglishDayThen, globalGroupName))
                 {
@@ -4735,86 +4875,33 @@ internal class Program
             return result;
         }
 
-        async Task<string> DzBaseChat(string groupName, bool EditMessage = false)
+        async Task<object[]> DzBaseChat(string groupName, bool EditMessage = false)
         {
-            string[] Culls = new string[8];
-            if (await dataAvailability(0, "Calls ?"))//проверяем есть ли вообще звонки в базе
+            object[] Final = new object[] { 0, false };
+            if (EditMessage)
             {
-                sqlConnection.Open();
-                SqlCommand command = new("SELECT time_interval FROM Calls", sqlConnection);
-                SqlDataReader reader = command.ExecuteReader();
-                int count = 0;
-                while (reader.Read())//считываем звонки из базы
+                await ReturnGroupIdMessageDz(groupName);
+                if (globalIdEditMessage == 0)
                 {
-                    try
-                    {
-                        string time = reader.GetString(reader.GetOrdinal("time_interval"));
-                        time = await RemoveDigitsAsync(time);
-                        time = time.Remove(time.Length - 2) + ":";
-                        Culls[count] = time;
-                    }
-                    catch { }
-                    count++;
+                    return Final;
                 }
-                reader.Close();
-                sqlConnection.Close();
             }
 
             await WhatWeekType();
-#pragma warning disable CA1416 // Проверка совместимости платформы
             sqlConnection.Close();
-            bool MaxLengthImage = false;
-            SizeF textSize;
-            float textWidthF = 195f;
-            string lesson_name1 = "", lesson_name2 = "", TextPhoto = "", TextMessage = "", Final = "0 ☰ false";
-            string imagePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "backgroundDz.png");
-            Bitmap image = new(imagePath); // обновляю изо
-            Graphics graphics = Graphics.FromImage(image);
-            Font font = new("Cascadia Mono", 20, FontStyle.Bold);
-            Font fontHomework = new("Cascadia Mono", 20, FontStyle.Regular);
-            Font fontCulls = new("Cascadia Mono", 14, FontStyle.Regular);
-            Font fontText = new("Cascadia Mono", 26, FontStyle.Bold);
-            SolidBrush brush = new(System.Drawing.Color.White);
-            SolidBrush brushText = new(System.Drawing.Color.FromArgb(214, 155, 131));
-            SolidBrush brushNumbers = new(System.Drawing.Color.FromArgb(181, 206, 168));
-            SolidBrush brushLesson = new(System.Drawing.Color.FromArgb(216, 160, 222));
-            Point day = new(670, 42);
-            Point weekValue = new(483, 138);
-            Point Date = new(370, 195);
-            Point Dz = new(210, 245);
-            StringFormat stringFormat = new()
-            {
-                Alignment = StringAlignment.Near,
-                LineAlignment = StringAlignment.Near,
-                Trimming = StringTrimming.Word
-            };
+
+            string lesson_name1 = "", lesson_name2 = "", TextPhoto = "", TextMessage = "";
+            byte[] image = null;
+            MemoryStream MemStreamImage = new();
 
             if (await ReturnDayWeek(true))
             {
-                await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка при отправки дз [1003]", replyMarkup: Keyboards.cancel);
-                graphics.Dispose();// Освободите ресурсы
-                image.Dispose();
-                return "ОШИБКА";
+                await botClient.SendTextMessageAsync(globalAdminId, $"❌Ошибка при отправки дз в чат  [1003]", replyMarkup: Keyboards.cancel);
+                return Final;
             }
-
 
             if (await dataAvailability(0, "Homework ?", groupName: globalGroupName))//проверяю есть ли вообще дз в базе
             {
-                TextPhoto = $"\"{RussianDayThen.ToUpper()}\"";
-                graphics.DrawString(TextPhoto, fontText, brushText, day);
-                textSize = graphics.MeasureString(TextPhoto, fontText, image.Width, stringFormat);
-                graphics.DrawString(")", fontText, brush, 670 + textSize.Width, 42);
-
-                TextPhoto = $"\"{weekType}\"";
-                graphics.DrawString(TextPhoto, fontText, brushText, weekValue);
-                textSize = graphics.MeasureString(TextPhoto, fontText, image.Width, stringFormat);
-                graphics.DrawString(";", fontText, brush, 483 + textSize.Width, 138);
-
-                TextPhoto = $"{DateDayThen}";
-                graphics.DrawString(TextPhoto, fontText, brushNumbers, Date);
-                textSize = graphics.MeasureString(TextPhoto, fontText, image.Width, stringFormat);
-                graphics.DrawString(";", fontText, brush, 370 + textSize.Width, 195);
-
                 // открытие соединения
                 await sqlConnection.OpenAsync();
 
@@ -4829,22 +4916,9 @@ internal class Program
                 // создание объекта SqlDataReader для чтения данных
                 using (SqlDataReader reader = commandDz.ExecuteReader())
                 {
-                    SizeF homeworkSize = graphics.MeasureString(TextPhoto, fontHomework, image.Width, stringFormat);
-                    SizeF lessonSize = graphics.MeasureString(TextPhoto, font, image.Width, stringFormat);
-                    SizeF lessonCulls = graphics.MeasureString(TextPhoto, fontCulls, image.Width, stringFormat);
-                    TextPhoto = "";
                     int count = 0;
                     while (reader.Read())
                     {
-                        string culls;
-                        if (Culls[count] != null && !string.IsNullOrWhiteSpace(Culls[count]))
-                        {
-                            culls = Culls[count];
-                        }
-                        else
-                        {
-                            culls = "???";
-                        }
                         string lesson_name, homework;
                         // чтение значений из текущей строки таблицы
                         lesson_name = (string)reader["lesson_name"];
@@ -4874,45 +4948,7 @@ internal class Program
                             }
                         }
                         catch { }
-                        // формирование строки для переменной
-                        //TextPhoto = $"{lesson_name}: {homework}\n";
 
-                        if (!MaxLengthImage)//рисование картинки
-                        {
-                            textWidthF += homeworkSize.Height + 5;
-                            // Определение размеров текста
-                            homeworkSize = graphics.MeasureString(homework, fontHomework, image.Width, stringFormat);
-                            lessonSize = graphics.MeasureString(lesson_name, font, image.Width, stringFormat);
-                            lessonCulls = graphics.MeasureString(culls, fontCulls, image.Width, stringFormat);
-
-                            if (textWidthF + lessonSize.Height + 5 + homeworkSize.Height > image.Height - 50)
-                            {
-                                await botClient.SendTextMessageAsync(globalChatId, $"*❌Ошибка [1001]:* При отправки дз весь текст дз не поместился на картинке", parseMode: ParseMode.MarkdownV2);
-                                // Освободите ресурсы
-                                graphics.Dispose();
-                                image.Dispose();
-                                MaxLengthImage = true;
-                                // return;
-                            }
-                            // Рисование текста с переносом
-                            graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                            if (homeworkSize.Width >= image.Width - 200)
-                            {
-                                homeworkSize = graphics.MeasureString(await transferText(homework, 41), fontHomework, image.Width, stringFormat);
-
-                                graphics.DrawString(lesson_name, font, brushLesson, 205, textWidthF);
-                                graphics.DrawString(culls, fontCulls, brushNumbers, 205 + lessonSize.Width + 1, textWidthF + 5);
-                                textWidthF += lessonSize.Height + 5;
-                                graphics.DrawString(await transferText(homework, 41), fontHomework, brush, 205, textWidthF);
-                            }
-                            else
-                            {
-                                graphics.DrawString(lesson_name, font, brushLesson, 205, textWidthF /*+ 40*/);
-                                graphics.DrawString(culls, fontCulls, brushNumbers, 205 + lessonSize.Width + 1, textWidthF + 5);
-                                graphics.DrawString(" " + homework, fontHomework, brush, 205, textWidthF + 40);
-                                textWidthF += 40;
-                            }
-                        }
                         // формирование строки для переменной
                         TextMessage += $"╟\\-‹*{await EscapeMarkdownV2(lesson_name)}:* {await EscapeMarkdownV2(homework)}";
                         TextMessage += "\n║\n";
@@ -4929,9 +4965,29 @@ internal class Program
                 }
                 TextMessage += $"*{await EscapeMarkdownV2($"—–-⟨{DateDayThen}⟩-–—")}*";
 
-                MemoryStream MemStreamImage = new();
-                image.Save(MemStreamImage, ImageFormat.Png);
-                MemStreamImage.Seek(0, SeekOrigin.Begin);
+                sqlConnection.Open();
+                SqlCommand command = new("SELECT image_Dz FROM Groups WHERE group_Name = @groupName", sqlConnection);
+                command.Parameters.AddWithValue("@groupName", groupName);
+                SqlDataReader readerImg = command.ExecuteReader();
+                if (readerImg.Read())
+                {
+                    // Получаем изо из базы для дз
+                    if (readerImg is not null && !readerImg.IsDBNull(readerImg.GetOrdinal("image_Dz")))
+                    {
+                        image = (byte[])readerImg["image_Dz"];
+                        MemStreamImage = new(image);
+                    }
+                }
+                sqlConnection.Close();
+                if (image == null)
+                {
+                    object[] ingMass = await ReturnImageDz();
+                    if ((bool)ingMass[0] == true)
+                    {
+                        image = (byte[])ingMass[3];
+                        MemStreamImage = new(image);
+                    }
+                }
 
                 await ReturnGroupIdChatDz(groupName);
 
@@ -4939,37 +4995,36 @@ internal class Program
                 {
                     if (EditMessage)
                     {
-                        await ReturnGroupIdMessageDz(groupName);
+                        //await ReturnGroupIdMessageDz(groupName);
 
-                        if (globalIdEditMessage != 0)
+                        /*if (globalIdEditMessage != 0)
+                        {*/
+                        if (image == null)
                         {
-                            if (MaxLengthImage)
-                            {
-                                // Заменяем текст в сообщении обязательно !EditMessageCaptionAsync!
-                                var editedTextMessage = await botClient.EditMessageCaptionAsync(globalIdBaseChat,
-                                    globalIdEditMessage, TextMessage,
-                                    parseMode: ParseMode.MarkdownV2);
-                            }
-                            else
-                            {
-                                //преобразуем из FileStream и создаем импорт медиа
-
-                                InputMediaPhoto inputMediaPhoto = new(InputFile.FromStream(MemStreamImage, "imageDz.png"));
-
-                                // Заменяем фотографию в сообщении
-                                var editedPhotoMessage = await botClient.EditMessageMediaAsync(globalIdBaseChat,
-                                    globalIdEditMessage, inputMediaPhoto);
-                                // Заменяем текст в сообщении обязательно !EditMessageCaptionAsync!
-                                var editedTextMessage = await botClient.EditMessageCaptionAsync(globalIdBaseChat,
-                                    globalIdEditMessage, TextMessage,
-                                    parseMode: ParseMode.MarkdownV2);
-                            }
+                            // Заменяем текст в сообщении обязательно !EditMessageCaptionAsync!
+                            var editedTextMessage = await botClient.EditMessageCaptionAsync(globalIdBaseChat,
+                                globalIdEditMessage, TextMessage,
+                                parseMode: ParseMode.MarkdownV2);
                         }
+                        else
+                        {
+                            //преобразуем из FileStream и создаем импорт медиа
 
+                            InputMediaPhoto inputMediaPhoto = new(InputFile.FromStream(MemStreamImage, "imageDz.png"));
+
+                            // Заменяем фотографию в сообщении
+                            var editedPhotoMessage = await botClient.EditMessageMediaAsync(globalIdBaseChat,
+                                globalIdEditMessage, inputMediaPhoto);
+                            // Заменяем текст в сообщении обязательно !EditMessageCaptionAsync!
+                            var editedTextMessage = await botClient.EditMessageCaptionAsync(globalIdBaseChat,
+                                globalIdEditMessage, TextMessage,
+                                parseMode: ParseMode.MarkdownV2);
+                        }
+                        //}
                     }
                     else
                     {
-                        if (MaxLengthImage)
+                        if (image == null)
                         {
                             var messageRes = await botClient.SendTextMessageAsync(chatId: globalIdBaseChat, text: TextMessage, parseMode: ParseMode.MarkdownV2);
                             globalIdEditMessage = messageRes.MessageId;
@@ -4981,28 +5036,62 @@ internal class Program
                                                            caption: TextMessage, parseMode: ParseMode.MarkdownV2);
                             globalIdEditMessage = messageRes.MessageId;
                         }
-                        await sqlConnection.OpenAsync();
 
+                        await sqlConnection.OpenAsync();
                         using SqlCommand command2 = new("UPDATE Groups SET id_Message_DZ = @idMessageDZ, update_time = @updateTime WHERE group_Name = @groupName", sqlConnection);
                         command2.Parameters.AddWithValue("@groupName", groupName);
                         command2.Parameters.AddWithValue("@idMessageDZ", globalIdEditMessage);
                         command2.Parameters.AddWithValue("@updateTime", DateTime.Now);
                         await command2.ExecuteNonQueryAsync();
-
                         await sqlConnection.CloseAsync();
                     }
-                    Final = $"{homeworkNullCount} ☰ true";
+                    Final = new object[] { homeworkNullCount, true };
                 }
                 else
                 {
                     await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка при получении ID группы отправки дз [3002]");
                 }
                 MemStreamImage.Close();
-                graphics.Dispose();
-                image.Dispose();
-#pragma warning restore CA1416 // Проверка совместимости платформы
             }
             return Final;
+        }
+
+        async Task<string[]> CallsInfo(string groupName, bool isImage = false)
+        {
+            string Calls = $"🛎*Расписание звонков {await EscapeMarkdownV2(groupName)}:*\n";
+            int count = 0;
+            if (await dataAvailability(0, "Calls ?", groupName: groupName))
+            {
+                //sqlConnection.Close();
+                await sqlConnection.OpenAsync();
+                SqlCommand command = new($"SELECT time_interval, note FROM [{groupName}_Calls]", sqlConnection);
+                SqlDataReader reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())//считываем звонки из базы
+                {
+                    string time = reader.GetString(reader.GetOrdinal("time_interval"));
+                    string note = reader.GetString(reader.GetOrdinal("note"));
+                    //составляем сообщение
+                    if (!isImage)
+                    {
+                        Calls += $"`{time}`" + note + "\n";
+                    }
+                    else
+                    {
+                        Calls += $"{time}" + "\n";
+                    }
+                    count++;
+                }
+                reader.Close();
+                await sqlConnection.CloseAsync();
+            }
+            else
+            {
+                Calls += "\n🛑*Отсутствует*🛑\n⠀";
+                count = 2;
+            }
+            //return Calls + "☰" + count.ToString();
+
+            return new string[2] { Calls, count.ToString() };
         }
 
         async Task TimerBot(int time = 5)
@@ -5197,13 +5286,23 @@ internal class Program
         {
             await sqlConnection.OpenAsync();//добавление человека в базу
                                             // Добавляем запись в таблицу
-            SqlCommand insertCommand = new("insert into Users(user_id, username, user_group) values (@userId, @username, @userGroup)", sqlConnection);
+            SqlCommand insertCommand = new("insert into Users(user_id, username, user_group, dateAdditions) values (@userId, @username, @userGroup, @dateAdditions)", sqlConnection);
             insertCommand.Parameters.AddWithValue("@userId", UserId);
             insertCommand.Parameters.AddWithValue("@username", UserName);
             insertCommand.Parameters.AddWithValue("@userGroup", "НетГруппы");
+            insertCommand.Parameters.AddWithValue("@dateAdditions", DateTime.Now);
             globalGroupName = "НетГруппы";
             insertCommand.ExecuteNonQuery();
             await sqlConnection.CloseAsync();
+            if (UserName == "СтандартИмя" || UserName == "НетИмени")
+            {
+                try
+                {
+                    await botClient.SendTextMessageAsync(globalChatId, "❕Нам не удалось считать ваше _имя_, пожалуйста добавьте его _\\(Желательно ник TG, Без @\\)_ в своем *профиле* для возможной связи\\!\n" +
+                        "✏️Для изменения имени войдите в /profile", replyMarkup: Keyboards.MainMenu, parseMode: ParseMode.MarkdownV2);
+                }
+                catch { }
+            }
         }
 
         async Task CopyDataDz(string DayName, string groupName)
@@ -5247,7 +5346,7 @@ internal class Program
                 Console.ResetColor();
                 await UpdateUserStatusAsync(globalUserId, true, true);//блокируем пользователя
                 await botClient.SendTextMessageAsync(chatId: globalChatId, text: "❌Ошибка [1005]: Вы заблокированы за спам...");
-                await botClient.SendTextMessageAsync(chatId: globalAdminId, text: $"🛑Пользователь {globalUserId} заблокирован за спам🛑");
+                await botClient.SendTextMessageAsync(chatId: globalAdminId, text: $"🛑Пользователь '{globalUserId}' заблокирован за спам🛑", parseMode: ParseMode.MarkdownV2);
                 return true;
             }
             return false;
@@ -5546,15 +5645,310 @@ internal class Program
             }
             InlineKeyboardButton[] inlineButtonCancel = new InlineKeyboardButton[]
             {
-                 InlineKeyboardButton.WithCallbackData(text: "🚫Отменить🚫", callbackData: "GroupCancel")
+                 InlineKeyboardButton.WithCallbackData(text: "🚫Отменить🚫", callbackData: "cancel")
             };
             inlineButtonRows.Add(inlineButtonCancel);
             await sqlConnection.CloseAsync();
             // Создадим объект InlineKeyboardMarkup с использованием списков названий групп и инлайн кнопок
             InlineKeyboardMarkup inlineKeyboardMarkup = new(inlineButtonRows.ToArray());
 
-            var mess = await botClient.SendTextMessageAsync(globalChatId, "*❕Выберите свою группу 👥:*", parseMode: ParseMode.MarkdownV2, replyMarkup: inlineKeyboardMarkup);
-            globalGroupChangeId = mess.MessageId;
+            var messageResDel = await botClient.SendTextMessageAsync(globalChatId, "*❕Выберите свою группу 👥:*", parseMode: ParseMode.MarkdownV2, replyMarkup: inlineKeyboardMarkup);
+            globalDeleteMessageCancelId = messageResDel.MessageId;
+        }
+
+        async Task NoDz(string valueNoDz)
+        {
+            await Cancel(messageEnabled: false, messageDelete: true);
+
+            await clearingTables($"[{globalGroupName}_Homework]");
+
+            //sqlConnection.Close();
+            await sqlConnection.OpenAsync();
+            SqlCommand insertCommand = new($"INSERT INTO [{globalGroupName}_Homework] (lesson_name, homework) VALUES (@lesson, @homework)", sqlConnection);
+            insertCommand.Parameters.AddWithValue("@lesson", "⠀" + valueNoDz);
+            insertCommand.Parameters.AddWithValue("@homework", "┈┅┈");
+            await insertCommand.ExecuteNonQueryAsync();
+            await sqlConnection.CloseAsync();
+
+            await botClient.SendTextMessageAsync(globalChatId, $"❕Теперь текущее дз задано как \"{valueNoDz.Replace("⊗", "").Trim()}\"!", replyMarkup: Keyboards.addComment);
+
+            pressingButtons["addHomework"] = false;
+            pressingButtons["changeSchedule"] = false;
+            pressingButtons["deleteHomework"] = false;
+
+            if (globalDzInfoAdd != 0)//проверка, можно ли отредактировать сообщение Добавления дз если оно было недавно
+            {
+                try
+                {
+                    string text = await DzInfoAdd(globalGroupName);
+                    if (text != "ОШИБКА")
+                    {
+                        await botClient.EditMessageTextAsync(globalChatId, globalDzInfoAdd, text: text.Split('☰')[0].Trim(), parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                    }
+                }
+                catch { }
+            }
+            if (globalDzInfoEdit != 0)//проверка, можно ли отредактировать сообщение Редактирования дз если оно было недавно
+            {
+                try
+                {
+                    string text = await DzInfoEdit(globalGroupName);
+                    if (text != "ОШИБКА")
+                    {
+                        await botClient.EditMessageTextAsync(globalChatId, globalDzInfoEdit, text: text.Trim(), parseMode: ParseMode.MarkdownV2); //Обновляю сообщение
+                    }
+                }
+                catch { }
+            }
+            await ReturnImageDz();
+            await DzBaseChat(globalGroupName, true);
+        }
+
+        async Task DeleteMessage(int deleteMessageID)
+        {
+            if (deleteMessageID != 0)
+            {
+                try
+                {
+                    await botClient.DeleteMessageAsync(globalChatId, deleteMessageID);
+                }
+                catch { }
+            }
+        }
+
+        async Task<object[]> ReturnImageDz()
+        {
+            string[] Culls = new string[8];
+            byte[] imageBit = new byte[0];
+            SizeF textSize;
+            string imagePath, Text = "", lesson_name1 = "", lesson_name2 = "";
+            bool isDz = true;
+            if (await dataAvailability(0, "Homework ~ noDz", groupName: globalGroupName))//если нет дз
+            {
+                Culls[7] = "*💤На завтра нет Дз\\!🎉*";
+                imagePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "backgroundDzNoDz.png");
+                isDz = false;
+            }
+            else if (await dataAvailability(0, "Homework ~ noPairs", groupName: globalGroupName))//если нет пар
+            {
+                Culls[7] = "*💤Завтра нет пар\\!🎉*";
+                imagePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "backgroundDzNoPars.png");
+                isDz = false;
+            }
+            else
+            {
+                if (await dataAvailability(0, "Calls ?", groupName: globalGroupName))
+                {//проверяем есть ли вообще звонки в базе
+                    string[] calls2 = await CallsInfo(globalGroupName, true);
+                    calls2 = calls2[0].Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+                    for (int i = 1; i < calls2.Length; i++)
+                    {
+                        string time = calls2[i].Trim();
+                        time = await RemoveDigitsAsync(time);
+                        time = time.Remove(time.Length - 2) + ":";
+                        Culls[i - 1] = time;
+                    }
+                }
+
+                imagePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "backgroundDz.png");
+            }
+            sqlConnection.Close();
+            await WhatWeekType();
+            float textWidthF = 195f;
+#pragma warning disable CA1416 // Проверка совместимости платформы
+            Bitmap image = new Bitmap(imagePath); // обновляю изо
+            Graphics graphics = Graphics.FromImage(image);
+            Font font = new("Cascadia Mono", 20, FontStyle.Bold);
+            Font fontHomework = new("Cascadia Mono", 20, FontStyle.Regular);
+            Font fontCulls = new("Cascadia Mono", 14, FontStyle.Regular);
+            Font fontText = new("Cascadia Mono", 26, FontStyle.Bold);
+            SolidBrush brush = new(System.Drawing.Color.White);
+            SolidBrush brushText = new(System.Drawing.Color.FromArgb(214, 155, 131));
+            SolidBrush brushNumbers = new(System.Drawing.Color.FromArgb(181, 206, 168));
+            SolidBrush brushLesson = new(System.Drawing.Color.FromArgb(216, 160, 222));
+            Point day = new(670, 42);
+            Point weekValue = new(483, 138);
+            Point Date = new(370, 195);
+            Point Dz = new(210, 245);
+            StringFormat stringFormat = new()
+            {
+                Alignment = StringAlignment.Near,
+                LineAlignment = StringAlignment.Near,
+                Trimming = StringTrimming.Word
+            };
+
+            if (await ReturnDayWeek(true))
+            {
+                await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка при формировании изображения: [1003]", replyMarkup: Keyboards.cancel);
+                graphics.Dispose();// Освободите ресурсы
+                image.Dispose();
+                return new object[] { false };
+            }
+
+            if (await dataAvailability(0, "Homework ?", groupName: globalGroupName))//проверяю есть ли вообще дз в базе
+            {
+                Text = $"\"{RussianDayThen.ToUpper()}\"";
+                graphics.DrawString(Text, fontText, brushText, day);
+                textSize = graphics.MeasureString(Text, fontText, image.Width, stringFormat);
+                graphics.DrawString(")", fontText, brush, 670 + textSize.Width, 42);
+
+                Text = $"\"{weekType}\"";
+                graphics.DrawString(Text, fontText, brushText, weekValue);
+                textSize = graphics.MeasureString(Text, fontText, image.Width, stringFormat);
+                graphics.DrawString(";", fontText, brush, 483 + textSize.Width, 138);
+
+                Text = $"{DateDayThen}";
+                graphics.DrawString(Text, fontText, brushNumbers, Date);
+                textSize = graphics.MeasureString(Text, fontText, image.Width, stringFormat);
+                graphics.DrawString(";", fontText, brush, 370 + textSize.Width, 195);
+
+                if (!isDz)
+                {
+                    Text = Culls[7]; //чтоб не создавать доп переменные)))
+                }
+                else
+                {
+                    // открытие соединения
+                    sqlConnection.Open();
+                    // создание команды для выполнения SQL-запроса
+                    string queryHome = @$"SELECT lesson_name, homework FROM [{globalGroupName}_Homework]";
+                    SqlCommand commandPicDz = new(queryHome, sqlConnection);
+
+                    // создание объекта SqlDataReader для чтения данных
+                    using (SqlDataReader reader = commandPicDz.ExecuteReader())
+                    {
+                        SizeF homeworkSize = graphics.MeasureString(Text, fontHomework, image.Width, stringFormat);
+                        SizeF lessonSize = graphics.MeasureString(Text, font, image.Width, stringFormat);
+                        SizeF lessonCulls = graphics.MeasureString(Text, fontCulls, image.Width, stringFormat);
+                        Text = "*🏠Дз на завтра:*";
+                        int count = 0;
+                        while (reader.Read())
+                        {
+                            string culls;
+                            if (Culls[count] != null && !string.IsNullOrWhiteSpace(Culls[count]))
+                            {
+                                culls = Culls[count];
+                            }
+                            else
+                            {
+                                culls = "?:";
+                            }
+                            string lesson_name, homework;
+                            // чтение значений из текущей строки таблицы
+                            lesson_name = (string)reader["lesson_name"];
+                            try
+                            {
+                                homework = (string)reader["homework"] + ";";
+                            }
+                            catch//если поле пустое, то записываем ничего
+                            {
+                                homework = " ✘ ";
+                            }
+
+                            try
+                            {
+                                lesson_name1 = lesson_name.Trim().Split('≣')[0].Trim(); lesson_name2 = lesson_name.Trim().Split('≣')[1].Trim();
+                                if (!string.IsNullOrWhiteSpace(lesson_name1) && !string.IsNullOrWhiteSpace(lesson_name2))//если поделились но пустые или специально пустые
+                                {
+                                    if (weekType == "Числитель")
+                                    {
+                                        lesson_name = lesson_name1;
+                                    }
+                                    else
+                                    {
+                                        lesson_name = lesson_name2;
+                                    }
+                                }
+                            }
+                            catch { }
+
+                            textWidthF += homeworkSize.Height + 5;
+                            // Определение размеров текста
+                            homeworkSize = graphics.MeasureString(homework, fontHomework, image.Width, stringFormat);
+                            lessonSize = graphics.MeasureString(lesson_name, font, image.Width, stringFormat);
+                            lessonCulls = graphics.MeasureString(culls, fontCulls, image.Width, stringFormat);
+
+                            if (textWidthF + lessonSize.Height + 5 + homeworkSize.Height > image.Height - 50)
+                            {
+                                await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка при формировании изображения: К сожалению весь текст дз не помещается на картинке [1001]", replyMarkup: Keyboards.cancel);
+                                // Освободите ресурсы
+                                graphics.Dispose();
+                                image.Dispose();
+                                return new object[] { false };
+                            }
+
+                            // Рисование текста с переносом
+                            graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                            if (homeworkSize.Width >= image.Width - 200)
+                            {
+                                homeworkSize = graphics.MeasureString(await transferText(homework, 41), fontHomework, image.Width, stringFormat);
+
+                                graphics.DrawString(lesson_name, font, brushLesson, 205, textWidthF);
+                                graphics.DrawString(culls, fontCulls, brushNumbers, 205 + lessonSize.Width + 1, textWidthF + 5);
+                                textWidthF += lessonSize.Height + 5;
+                                graphics.DrawString(await transferText(homework, 41), fontHomework, brush, 205, textWidthF);
+                            }
+                            else
+                            {
+                                graphics.DrawString(lesson_name, font, brushLesson, 205, textWidthF /*+ 40*/);
+                                graphics.DrawString(culls, fontCulls, brushNumbers, 205 + lessonSize.Width + 1, textWidthF + 5);
+                                graphics.DrawString(" " + homework, fontHomework, brush, 205, textWidthF + 40);
+                                textWidthF += 40;
+                            }
+                            count++;
+                            // ТАК НАДО
+                        }
+                    }
+                }
+                MemoryStream MemStreamImage = new();
+                image.Save(MemStreamImage, ImageFormat.Png);
+                imageBit = MemStreamImage.ToArray();
+                MemStreamImage.Close();
+
+                // Создаем объект SqlConnection для подключения к базе данных
+                using (SqlConnection connection = new(connectionString))
+                {
+                    connection.Open();
+
+                    // Создаем запрос на обновление данных в таблицу Groups
+                    SqlCommand command = new("UPDATE Groups SET image_Dz = @image WHERE group_Name = @groupName", connection);
+                    command.Parameters.AddWithValue("@groupName", globalGroupName);
+
+                    SqlParameter imageParam = new("@image", SqlDbType.VarBinary, -1)
+                    {
+                        Value = imageBit
+                    };//обновляем изображение в базе в виде массива байт
+                    command.Parameters.Add(imageParam);
+                    // Выполняем запрос на добавление данных в таблицу Groups
+                    command.ExecuteNonQuery();
+                    connection.Close();
+                }
+                sqlConnection.Close();
+                graphics.Dispose();
+                image.Dispose();
+                return new object[] { true, isDz, Text, imageBit };
+            }
+            graphics.Dispose();
+            image.Dispose();
+            return new object[] { false, isDz, Text, imageBit };
+#pragma warning restore CA1416 // Проверка совместимости платформы
+        }
+
+        async Task<int> FullDeleteDz(string groupName)
+        {
+            int rowsAffected = 0;
+
+            rowsAffected += await clearingTables($"[{groupName}_Homework]");
+
+            sqlConnection.Open();
+            SqlCommand updateCommand = new("UPDATE Groups SET week_Day_DZ = NULL, image_Dz = NULL WHERE group_Name = @groupName", sqlConnection);
+            updateCommand.Parameters.AddWithValue("@groupName", groupName);
+            rowsAffected += updateCommand.ExecuteNonQuery();
+            sqlConnection.Close();
+
+            await ReturnGroupIdMessageDz(groupName);
+
+            return rowsAffected;
         }
 
         async Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)//любые возможные ошибки
@@ -5573,7 +5967,13 @@ internal class Program
                     if (ErrorMessage.Contains("Telegram.Bot.Exceptions.RequestException: Request timed out")
                         || ErrorMessage.Contains("Request timed out"))
                     {
-                        await botClient.SendTextMessageAsync(globalAdminId, $"❗️Бот был перезапущен❗️");
+                        await botClient.SendTextMessageAsync(globalAdminId, $"❗️Проблемы сети: Request timed out❗️");
+                    }
+                    else if (ErrorMessage.Contains("Telegram.Bot.Exceptions.RequestException: Exception during making request")
+                        || ErrorMessage.Contains("Программа на вашем хост-компьютере разорвала установленное подключение")
+                        || ErrorMessage.Contains("Попытка установить соединение была безуспешной"))
+                    {
+                        await botClient.SendTextMessageAsync(globalAdminId, $"❗️Проблемы сети: Exception during making request❗️");
                     }
                     else if (ErrorMessage.Contains("[409]") && ErrorMessage.Contains("make sure that only one bot instance is running"))
                     {
@@ -5595,7 +5995,13 @@ internal class Program
                     if (ErrorMessage.Contains("Telegram.Bot.Exceptions.RequestException: Request timed out")
                         || ErrorMessage.Contains("Request timed out"))
                     {
-                        await botClient.SendTextMessageAsync(globalAdminId, $"❗️Бот был перезапущен❗️");
+                        await botClient.SendTextMessageAsync(globalAdminId, $"❗️Проблемы сети: Request timed out❗️");
+                    }
+                    else if (ErrorMessage.Contains("Telegram.Bot.Exceptions.RequestException: Exception during making request")
+                        || ErrorMessage.Contains("Программа на вашем хост-компьютере разорвала установленное подключение")
+                        || ErrorMessage.Contains("Попытка установить соединение была безуспешной"))
+                    {
+                        await botClient.SendTextMessageAsync(globalAdminId, $"❗️Проблемы сети: Exception during making request❗️");
                     }
                     else if (ErrorMessage.Contains("[409]") && ErrorMessage.Contains("make sure that only one bot instance is running"))
                     {
@@ -5608,14 +6014,17 @@ internal class Program
                     }
                     else
                     {
-                        await botClient.SendTextMessageAsync(globalChatId, $"❌🛑❌Вы сломали бота(((\n" +
-                            $"❗️Вероятно всем пользователям будет выдано ограничение на его использование❗️\n" +
-                            $"🛠На исправление уже направлены все силы, это займет како-то время..." +
-                            $"\n\n" +
-                            $"Ошибка:\n{ErrorMessage}");
-                        /*await messageEveryone($"❗️К сожалению у бота возникли критические ошибки, всем пользователям будет выдано ограничение на его использование❗️\n" +
-                            $"🛠На исправление уже направлены все силы, это займет како-то время");*/
-
+                        TimeSpan elapsedTime = DateTime.Now - globalStartTime;
+                        if (elapsedTime.TotalSeconds > 10)
+                        {
+                            await botClient.SendTextMessageAsync(globalChatId, $"❌🛑❌Вы сломали бота(((\n" +
+                                $"❗️Вероятно всем пользователям будет выдано ограничение на его использование❗️\n" +
+                                $"🛠На исправление уже направлены все силы, это займет како-то время..." +
+                                $"\n\n" +
+                                $"Ошибка:\n{ErrorMessage}");
+                            /*await messageEveryone($"❗️К сожалению у бота возникли критические ошибки, всем пользователям будет выдано ограничение на его использование❗️\n" +
+                                $"🛠На исправление уже направлены все силы, это займет како-то время");*/
+                        }
                         sqlConnection.Close();
                         sqlConnection.Open();
                         SqlCommand selectCommandUser = new("SELECT * FROM Users WHERE user_id = @userId", sqlConnection);//считываем данные о человеке
@@ -5628,14 +6037,17 @@ internal class Program
                             readerUser.Close();
                         }
                         sqlConnection.Close();
-                        await botClient.SendTextMessageAsync(globalAdminId, $"❌🛑❌Поломка бота!\n" +
-                            $"У пользователя {globalChatId}, вероятное имя @{Username} , время поломки {DateTime.Now}. Последнее отправленное действие: {Exception}" +
-                            $"\n\n" +
-                            $"Ошибка:\n{ErrorMessage}");
                     }
                 }
             }
             catch { }
+            if (globalChatId != globalAdminId)
+            {
+                await botClient.SendTextMessageAsync(globalAdminId, $"❌🛑❌Поломка бота!\n" +
+                                $"У пользователя {globalChatId}, вероятное имя @{Username} , время поломки {DateTime.Now}. Последнее отправленное действие: {Exception}" +
+                                $"\n\n" +
+                                $"Ошибка:\n{ErrorMessage}");
+            }
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"[{DateTime.Now}] Ошибка у пользователя {globalChatId}, вероятное имя @{Username} . Последнее отправленное действие: {Exception} И ошибка {ErrorMessage}");
             Console.ResetColor();
