@@ -6,7 +6,7 @@ namespace LibDz_infoBot
     {
         public static ReplyKeyboardMarkup MainMenu = new(new[] //любой пользователь
         {
-           new KeyboardButton[] { "🏠Текущее ДЗ" },
+           new KeyboardButton[] { "🏠Текущее ДЗ", "🗓Расписания"},
            new KeyboardButton[] { "🔰Еще...", "👨‍💻Администратор" },
         })
         { ResizeKeyboard = true };
@@ -14,7 +14,7 @@ namespace LibDz_infoBot
         public static ReplyKeyboardMarkup Menu1 = new(new[] //любой пользователь
         {
             new KeyboardButton[] { "📰Новости", "👥Контакты" },
-            new KeyboardButton[] { "🗓Расписания", "◀️Назад" },
+            new KeyboardButton[] { "◀️Назад" },
         })
         { ResizeKeyboard = true };
 
@@ -50,11 +50,11 @@ namespace LibDz_infoBot
         })
         { ResizeKeyboard = true };
 
-        public static ReplyKeyboardMarkup administratorVIP = new(new[] // мин уровень допуска адм2 или выше
+        public static ReplyKeyboardMarkup HelpAdmin = new(new[] // мин уровень допуска адм2 или выше
         {
-            new KeyboardButton[] { "📰Управление новостями", "👨‍💻Управление админами" },
-            new KeyboardButton[] { "🤖Управление ботом", "🗃База данных"  },
-            new KeyboardButton[] { "◀️Назад" },
+            new KeyboardButton[] { "👨‍💻Управление админами" },
+            new KeyboardButton[] { "🗃База данных"  },
+            new KeyboardButton[] { "🔰Еще...", "◀️Назад" },
         })
         { ResizeKeyboard = true };
 
@@ -65,13 +65,6 @@ namespace LibDz_infoBot
         })
         { ResizeKeyboard = true };
 
-        public static ReplyKeyboardMarkup News = new(new[] // мин уровень допуска адм2 или выше
-        {
-            new KeyboardButton[] { "➕Добавить новость", "🗑Удалить новость" },
-            new KeyboardButton[] { "✏️Редактировать новость", "◀️Назад" },
-        })
-        { ResizeKeyboard = true };
-
         public static ReplyKeyboardMarkup database = new(new[] // мин уровень допуска адм2 или выше
         {
             new KeyboardButton[] { "👨‍💻Информация о Админах" },
@@ -79,6 +72,22 @@ namespace LibDz_infoBot
             new KeyboardButton[] { "◀️Назад" },
         })
         { ResizeKeyboard = true };
+
+        public static ReplyKeyboardMarkup Moderator = new(new[] // мин уровень допуска адм2 или выше
+        {
+            new KeyboardButton[] { "📰Управление новостями", },
+            new KeyboardButton[] { "🤖Управление ботом",  },
+            new KeyboardButton[] { "◀️Назад" },
+        })
+        { ResizeKeyboard = true };
+
+        public static ReplyKeyboardMarkup News = new(new[] // мин уровень допуска адм1
+        {
+            new KeyboardButton[] { "➕Добавить новость", "🗑Удалить новость" },
+            new KeyboardButton[] { "✏️Редактировать новость", "◀️Назад" },
+        })
+        { ResizeKeyboard = true };
+
 
         public static ReplyKeyboardMarkup botManagement = new(new[] // мин уровень допуска адм1
         {
@@ -168,6 +177,18 @@ namespace LibDz_infoBot
             }
         });
 
+        public static InlineKeyboardMarkup noAutoSendDz = new(new[]
+        {
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "✏️Отредактировать", callbackData: "confirm"),
+            },
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "✉️Отправить повторно", callbackData: "cancel"),
+            }
+        });
+
 
         public static InlineKeyboardMarkup newsButton = new(new[]
         {
@@ -192,24 +213,6 @@ namespace LibDz_infoBot
             {
                 InlineKeyboardButton.WithCallbackData(text: "🗂Удалить все", callbackData: "deleteEverything"),//             <----                   <----                     !???!
                 InlineKeyboardButton.WithCallbackData(text: "📔Удалить одно", callbackData: "deleteOne"),
-            },
-        });
-
-        public static InlineKeyboardMarkup shutdownCheck = new(new[]
-        {
-            new []
-            {
-                InlineKeyboardButton.WithCallbackData(text: "🛑Выключить", callbackData: "shutdown"),
-                InlineKeyboardButton.WithCallbackData(text: "🚫Отменить", callbackData: "cancelShutdown"),
-            },
-        });
-
-        public static InlineKeyboardMarkup shutdownBot = new(new[]
-        {
-            new []
-            {
-                InlineKeyboardButton.WithCallbackData(text: "🕚Через 5 минут", callbackData: "shutdown5minuets"),
-                InlineKeyboardButton.WithCallbackData(text: "🕙Через 10 минут", callbackData: "shutdown10minuets"),
             },
         });
 

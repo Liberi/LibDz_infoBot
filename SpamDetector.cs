@@ -1,8 +1,12 @@
 ﻿
+using System.Data.SqlClient;
+using System.Data;
+
 namespace LibDz_infoBot
 {
     public class SpamDetector
     {
+        public SqlConnection sqlConnection;
         public DateTime StartTime;
         private Dictionary<long, List<DateTime>> userMessages;
 
@@ -36,6 +40,41 @@ namespace LibDz_infoBot
             }
 
             return false;
+        }
+
+        async public Task<bool> IsUserBlockedAsync(long userId)
+        {
+            sqlConnection.Close();
+            bool result = false;//проверка на блокировку
+            try
+            {
+                await sqlConnection.OpenAsync();
+
+                string query = @"IF EXISTS (SELECT * FROM Users WHERE user_id = @UserId AND is_blocked = 1)
+                                SELECT 'true'
+                            ELSE
+                                SELECT 'false'"
+                ;
+
+                using SqlCommand command = new(query, sqlConnection);
+                command.Parameters.AddWithValue("@UserId", userId);
+                object queryResult = await command.ExecuteScalarAsync();
+
+                if (queryResult != null && queryResult != DBNull.Value)//берем результат из бд
+                {
+                    result = Convert.ToBoolean(queryResult);
+                }
+            }
+            finally//в любом случае закрываем соединение с бд
+            {
+                if (sqlConnection.State == ConnectionState.Open)
+                {
+                    await sqlConnection.CloseAsync();
+                }
+                //sqlConnection.Dispose();
+            }
+
+            return result;
         }
     }
 }
