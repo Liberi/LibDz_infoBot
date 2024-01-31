@@ -181,11 +181,15 @@ namespace LibDz_infoBot
         {
             new []
             {
-                InlineKeyboardButton.WithCallbackData(text: "✏️Отредактировать", callbackData: "confirm"),
+                InlineKeyboardButton.WithCallbackData(text: "✏️Отредактировать", callbackData: "editDz"),
             },
             new []
             {
-                InlineKeyboardButton.WithCallbackData(text: "✉️Отправить повторно", callbackData: "cancel"),
+                InlineKeyboardButton.WithCallbackData(text: "✉️Отправить повторно", callbackData: "resendDz"),
+            },
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "🚫Отменить🚫", callbackData: "cancel"),
             }
         });
 
