@@ -9,8 +9,8 @@ namespace LibDz_infoBot
         public SqlConnection sqlConnection;
         public DateTime StartTime;
         private Dictionary<long, List<DateTime>> userMessages;
-
-        public SpamDetector()
+        int a;
+        public SpamDetector() 
         {
             userMessages = new Dictionary<long, List<DateTime>>();
         }

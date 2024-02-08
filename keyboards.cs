@@ -4,6 +4,7 @@ namespace LibDz_infoBot
 {
     internal class Keyboards
     {
+        int a;
         public static ReplyKeyboardMarkup MainMenu = new(new[] //любой пользователь
         {
            new KeyboardButton[] { "🏠Текущее ДЗ", "🗓Расписания"},
@@ -92,7 +93,8 @@ namespace LibDz_infoBot
         public static ReplyKeyboardMarkup botManagement = new(new[] // мин уровень допуска адм1
         {
             new KeyboardButton[] { "🗣Сообщение всем", "🛑Выключение" },
-            new KeyboardButton[] { "🔏Б/Р Пользователей", "◀️Назад" },
+            new KeyboardButton[] { "🔏Б/Р Пользователей", "👥Управление группами" },
+            new KeyboardButton[] { "◀️Назад" },
         })
         { ResizeKeyboard = true };
 
@@ -103,7 +105,23 @@ namespace LibDz_infoBot
         })
         { ResizeKeyboard = true };
 
+        public static ReplyKeyboardMarkup groupManagement = new(new[] // мин уровень допуска адм1
+        {
+            new KeyboardButton[] { "➕Добавить группу", "🗑Удалить группу" },
+            new KeyboardButton[] { "👨‍🔧Изменить ID админа", "📮Изменить ID группы" },
+            new KeyboardButton[] { "◀️Назад" },
+        })
+        { ResizeKeyboard = true };
+
         /*------------------------------=========================================------------------------------*/
+        public static InlineKeyboardMarkup botUrl = new(new[] 
+        {
+            new []
+            {
+                InlineKeyboardButton.WithUrl("🤖LibDz_infoBot", "https://t.me/LibDz_infoBot"),
+            },
+        });
+
         public static InlineKeyboardMarkup Help = new(new[]
         {
             new []

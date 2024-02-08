@@ -26,6 +26,13 @@ CREATE TABLE [dbo].[NewGroup_Monday_Schedule] (
     CONSTRAINT [PK_NewGroup_Monday_Schedule] PRIMARY KEY CLUSTERED ([Id_lesson] ASC)
 );
 
+CREATE TABLE [dbo].[NewGroup_Sunday_Schedule] (
+    [Id_lesson] INT IDENTITY(1,1) NOT NULL,
+    [lesson_name] NVARCHAR(100) NOT NULL,
+    [audience_code] NVARCHAR(50) NULL,
+    CONSTRAINT [PK_NewGroup_Sunday_Schedule] PRIMARY KEY CLUSTERED ([Id_lesson] ASC)
+);
+
 CREATE TABLE [dbo].[NewGroup_Saturday_Schedule] (
     [Id_lesson] INT IDENTITY(1,1) NOT NULL,
     [lesson_name] NVARCHAR(100) NOT NULL,
