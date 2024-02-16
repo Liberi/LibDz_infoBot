@@ -20,6 +20,7 @@ namespace LibDz_infoBot
         public SpamDetector SpamDetector { get; set; }
         public TelegramBotClient BotClient { get; set; }
         public long ChatId { get; set; }
+        public long AdminId { get; set; }
         public Dictionary<string, bool> PressingButtons { get; set; }
         public Dictionary<long, DateTime> BlockedUser { get; set; }
         public Dictionary<long, UserValues> GlobalUserValues { get; set; }
@@ -78,16 +79,13 @@ namespace LibDz_infoBot
             }
             else if (PressingButtons["restartBotTimer"])
             {
-                // Запускаем новое приложение
-                string patch = Assembly.GetExecutingAssembly().Location;
-                Process.Start(patch.Replace(".dll", ".exe"));
-
-                Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine($"[{DateTime.Now}] Предпринята попытка перезапуска Бота!");
-                Console.ResetColor();
-
-                // Завершаем текущее приложение
-                Environment.Exit(0);
+                RestartBot restartBot = new()
+                {
+                    AdminId = AdminId,
+                    UserId = ChatId,
+                    BotClient = BotClient
+                };
+                await restartBot.Restart($"Администратор {ChatId} перезагрузил бота", "Выполняется действие `restartBotTimer`", true);
             }
         }
     }

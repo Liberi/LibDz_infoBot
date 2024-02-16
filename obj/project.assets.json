@@ -2,7 +2,7 @@
   "version": 3,
   "targets": {
     "net6.0": {
-      "EPPlus/7.0.6": {
+      "EPPlus/7.0.8": {
         "type": "package",
         "dependencies": {
           "EPPlus.Interfaces": "6.1.1",
@@ -610,15 +610,15 @@
     }
   },
   "libraries": {
-    "EPPlus/7.0.6": {
-      "sha512": "3sc2sV4we6SrFn1aTLWVI9+v/RgEBtSN9Zum2DaolvsbJO05LbrUw8CFnJmu27VIktUDgk0GwQkn3y+Kizm+dA==",
+    "EPPlus/7.0.8": {
+      "sha512": "q9shaL3LMVtfUHC7KtCWTn40cO5kjirfxkUo1Hloe2ZqZmP/3UFT70JBnIhTMTh1i/dZ8ynrkd9gxLuzqfriQQ==",
       "type": "package",
-      "path": "epplus/7.0.6",
+      "path": "epplus/7.0.8",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "EPPlusLogo.png",
-        "epplus.7.0.6.nupkg.sha512",
+        "epplus.7.0.8.nupkg.sha512",
         "epplus.nuspec",
         "lib/net35/EPPlus.dll",
         "lib/net35/EPPlus.xml",
@@ -1659,7 +1659,7 @@
   },
   "projectFileDependencyGroups": {
     "net6.0": [
-      "EPPlus >= 7.0.6",
+      "EPPlus >= 7.0.8",
       "System.Configuration.ConfigurationManager >= 8.0.0",
       "System.Data.SqlClient >= 4.8.6",
       "Telegram.Bot >= 19.0.0"
@@ -1706,7 +1706,7 @@
         "dependencies": {
           "EPPlus": {
             "target": "Package",
-            "version": "[7.0.6, )"
+            "version": "[7.0.8, )"
           },
           "System.Configuration.ConfigurationManager": {
             "target": "Package",

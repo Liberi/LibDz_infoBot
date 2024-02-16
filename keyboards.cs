@@ -114,11 +114,20 @@ namespace LibDz_infoBot
         { ResizeKeyboard = true };
 
         /*------------------------------=========================================------------------------------*/
-        public static InlineKeyboardMarkup botUrl = new(new[] 
+        public static InlineKeyboardMarkup botUrl = new(new[]
         {
             new []
             {
                 InlineKeyboardButton.WithUrl("🤖LibDz_infoBot", "https://t.me/LibDz_infoBot"),
+            },
+        });
+
+        public static InlineKeyboardMarkup Start = new(new[]
+        {
+            new []
+            {
+                InlineKeyboardButton.WithUrl("👥Наша группа ДЗ", "https://t.me/kadievacrushcringe"),
+                InlineKeyboardButton.WithUrl("🏫Группа колледжа", "https://t.me/vce_edu"),
             },
         });
 
@@ -141,7 +150,7 @@ namespace LibDz_infoBot
             new []
             {
                 InlineKeyboardButton.WithUrl("👥Основная группа ДЗ", "https://t.me/kadievacrushcringe"),
-                InlineKeyboardButton.WithUrl("🏫Группа колледжа", "https://t.me/vke_edu"),
+                InlineKeyboardButton.WithUrl("🏫Группа колледжа", "https://t.me/vce_edu"),
             }
         });
 
@@ -151,6 +160,22 @@ namespace LibDz_infoBot
             {
                 InlineKeyboardButton.WithCallbackData(text: "📝Изменить группу", callbackData: "updateGroup"),
                 InlineKeyboardButton.WithCallbackData(text: "📝Изменить имя", callbackData: "updateName"),
+            },
+        });
+
+        public static InlineKeyboardMarkup EditDz = new(new[]
+        {
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "📝Изменить текст Дз", callbackData: "editDz"),
+            },
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "📝Изменить расписание для Дз", callbackData: "editLesson"),
+            },
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "🚫Отменить🚫", callbackData: "cancel"),
             },
         });
 
@@ -199,11 +224,11 @@ namespace LibDz_infoBot
         {
             new []
             {
-                InlineKeyboardButton.WithCallbackData(text: "✏️Отредактировать", callbackData: "editDz"),
+                InlineKeyboardButton.WithCallbackData(text: "✏️Отредактировать", callbackData: "editChatDz"),
             },
             new []
             {
-                InlineKeyboardButton.WithCallbackData(text: "✉️Отправить повторно", callbackData: "resendDz"),
+                InlineKeyboardButton.WithCallbackData(text: "✉️Отправить повторно", callbackData: "resendChatDz"),
             },
             new []
             {

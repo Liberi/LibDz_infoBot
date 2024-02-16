@@ -42,7 +42,7 @@
           "dependencies": {
             "EPPlus": {
               "target": "Package",
-              "version": "[7.0.6, )"
+              "version": "[7.0.8, )"
             },
             "System.Configuration.ConfigurationManager": {
               "target": "Package",
