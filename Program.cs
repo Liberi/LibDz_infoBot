@@ -21,7 +21,7 @@ internal class Program
 {
     public static async Task Main()
     {
-        //       6154384299:AAHkuqxMXNW3Chm2DG-EvOY6DWoxPtOzgOo
+        //           6154384299:AAHkuqxMXNW3Chm2DG-EvOY6DWoxPtOzgOo
         string token = "5645539273:AAFuIkDhTnFTQNvjBL1ocC9fb3BqmJPt4J0";
         #region Основные переменные, массивы, параметры запуска и соединения     
         SpamDetector spamDetector = new();
@@ -75,7 +75,7 @@ internal class Program
         Dictionary<long, UserValues> globalUserValues = new();//словарь хранит все переменные в классе для разделения данных между пользователями
         bool isGlobalCriticalException = true; //Для метода ошибок, мы проверяем поймали ли мы ошибку или она поймана глобально 
         int globalTimerCountRestart = 0; // для простого определения какой этап повтора таймера авто-отправки дз сейчас
-        long globalUserId = 0, globalChatId = 1545914098, globalIdBaseChat = -1001602210737  /*-1001797288636*/, globalAdminId = 1545914098;
+        long globalUserId = 1545914098, globalChatId = 1545914098, globalIdBaseChat = -1001602210737  /*-1001797288636*/, globalAdminId = 1545914098;
         string globalUsername = "СтандартИмя", Exception = "ПУСТО", weekType = "Числитель"; //Exception последнее понятное примерное действие сделанное пользователем если будет ошибка
         string EnglishDayNow = "Monday", EnglishDayThen = "Monday", EnglishDayYesterday = "Monday", RussianDayNow = "Понедельник", RussianDayThen = "Понедельник", RussianDayYesterday = "Понедельник",
             DateDayNow = "01.01", DateDayThen = "01.01", DateDayYesterday = "01.01";
@@ -104,6 +104,10 @@ internal class Program
         {
             AllowedUpdates = Array.Empty<UpdateType>() // получать все типы обновлений, кроме обновлений, связанных с ChatMember
         };
+
+        var timerDz = new System.Timers.Timer();
+        var timerWeekType = new System.Timers.Timer();
+        var pollBD = new System.Timers.Timer();
 
         botClient.StartReceiving(
             updateHandler: HandleUpdateAsync,
@@ -175,7 +179,7 @@ internal class Program
         }
 
         // создаем таймер, который будет запускаться в указанное время
-        var timerDz = new System.Timers.Timer();
+        /*var timerDz = new System.Timers.Timer();*/
         timerDz.Elapsed += new ElapsedEventHandler(async (sender, eventArgs) =>
         {
             await sqlConnection.OpenAsync();
@@ -184,7 +188,7 @@ internal class Program
             {
                 using (SqlDataReader readerGroup = await commandDz.ExecuteReaderAsync())
                 {
-                    if (await readerGroup.ReadAsync())
+                    while (await readerGroup.ReadAsync())
                     {// Получаем значения из базы
                         string group_Name;
                         group_Name = (string)readerGroup["group_Name"];
@@ -219,49 +223,61 @@ internal class Program
             Console.WriteLine($"[{DateTime.Now}] Начало отправки сообщений -------------------->");
             Console.ResetColor();
 
+            await CheckUserValues(globalAdminId);
+            long valueUserId = globalUserId;
+            globalUserId = globalAdminId;
             bool fullSendDz = true;
             foreach (object[] GroupDzFor in GroupDz)
             {
-                if ((int)GroupDzFor[3] != 0)
+                try
                 {
-                    await ReturnGroupIdMessageDz((string)GroupDzFor[0]);
-                }
-                else
-                {
-                    globalUserValues[globalUserId].MessageEditId = 0;
-                }
-                if (globalUserValues[globalUserId].MessageEditId == 0)
-                {
-                    object[] DzChat = await DzBaseChat((string)GroupDzFor[0], chat_id: (long)GroupDzFor[1]);//отправляем сообщение
-                    int homeworkNullCount = (int)DzChat[0];//проверяем сколько пустых строк дз 
-                    bool isSendDz = (bool)DzChat[1];//отправилось ли вообще 
-                    if (isSendDz)
+                    if ((int)GroupDzFor[3] != 0)
                     {
-                        if (homeworkNullCount >= 3)
-                        {
-                            if ((long)GroupDzFor[2] != 0) await botClient.SendTextMessageAsync(chatId: (long)GroupDzFor[2], text: "❗️При отправке дз в заполнении оказалось 3 или более пустых строк❗️");
-                            Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"[{DateTime.Now}] При отправке дз в заполнении оказалось 3 или более пустых строк!");
-                            Console.ResetColor();
-                        }
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"[{DateTime.Now}] Авто-сообщение отправлено в чат: {(string)GroupDzFor[0]}");
-                        Console.ResetColor();
+                        await ReturnGroupIdMessageDz((string)GroupDzFor[0]);
                     }
                     else
                     {
-                        if (await dataAvailability(0, "Schedule ?", EnglishDayThen, globalUserValues[globalUserId].GroupName))//если есть расписание но дз не добавили
+                        globalUserValues[globalAdminId].MessageEditId = 0;
+                    }
+                    if (globalUserValues[globalAdminId].MessageEditId == 0)
+                    {
+                        object[] DzChat = await DzBaseChat((string)GroupDzFor[0], chat_id: (long)GroupDzFor[1]);//отправляем сообщение
+                        int homeworkNullCount = (int)DzChat[0];//проверяем сколько пустых строк дз 
+                        bool isSendDz = (bool)DzChat[1];//отправилось ли вообще 
+                        if (isSendDz)
                         {
-                            if ((long)GroupDzFor[2] != 0) await botClient.SendTextMessageAsync(chatId: (long)GroupDzFor[2], text: "❗️Не удалось отправить ДЗ, дз являлось пустым❗️");
-                            fullSendDz = false;
+                            if (homeworkNullCount >= 3)
+                            {
+                                if ((long)GroupDzFor[2] != 0) await botClient.SendTextMessageAsync(chatId: (long)GroupDzFor[2], text: "❗️При отправке дз в заполнении оказалось 3 или более пустых строк❗️");
+                                Console.ForegroundColor = ConsoleColor.Yellow;
+                                Console.WriteLine($"[{DateTime.Now}] При отправке дз в заполнении оказалось 3 или более пустых строк!");
+                                Console.ResetColor();
+                            }
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"[{DateTime.Now}] Авто-сообщение отправлено в чат: {(string)GroupDzFor[0]}");
+                            Console.ResetColor();
                         }
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"[{DateTime.Now}] Авто-сообщение Не отправлено в чат: {(string)GroupDzFor[0]}");
-                        Console.ResetColor();
+                        else
+                        {
+                            if (await dataAvailability(0, "Schedule ?", EnglishDayThen, (string)GroupDzFor[0]))//если есть расписание но дз не добавили
+                            {
+                                if ((long)GroupDzFor[2] != 0) await botClient.SendTextMessageAsync(chatId: (long)GroupDzFor[2], text: "❗️Не удалось отправить ДЗ, дз являлось пустым❗️");
+                                fullSendDz = false;
+                            }
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"[{DateTime.Now}] Авто-сообщение Не отправлено в чат: {(string)GroupDzFor[0]}");
+                            Console.ResetColor();
+                        }
                     }
                 }
+                catch
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"[{DateTime.Now}] Авто-сообщение Не отправлено в чат: {(string)GroupDzFor[0]} из-за Ошибки!");
+                    Console.ResetColor();
+                }
             }
-
+            globalUserId = valueUserId;
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"[{DateTime.Now}] Конец  отправки сообщений <--------------------");
             Console.ResetColor();
@@ -336,7 +352,7 @@ internal class Program
         TimeSpan timeToNextRunWeekType = nextSunday - now;
 
         // создаем таймер, который будет запускаться каждую неделю
-        var timerWeekType = new System.Timers.Timer();
+        /*var timerWeekType = new System.Timers.Timer();*/
         timerWeekType.Elapsed += new ElapsedEventHandler(async (sender, eventArgs) =>
         {
             // перезапускаем таймер на следующую неделю
@@ -347,75 +363,71 @@ internal class Program
             Console.ResetColor();
 
             await sqlConnection.OpenAsync();
-            List<string[]> updateGroup = new();
+            List<object[]> updateGroup = new();
             using (SqlCommand command = new("SELECT group_Name, week_Type, week_Day_DZ FROM Groups", sqlConnection))
             {
                 using (SqlDataReader readerGroup = await command.ExecuteReaderAsync())
                 {
-                    int countGroup = 0;
-                    if (await readerGroup.ReadAsync())
+                    //int countGroup = 0;
+                    while (await readerGroup.ReadAsync())
                     {// Получаем значения из базы
-                        string group_Name, week_Type, week_Day_DZ = "";
+                        string group_Name, week_Day_DZ = null;
+                        bool week_Type = false;
                         group_Name = (string)readerGroup["group_Name"];
                         if (!readerGroup.IsDBNull(readerGroup.GetOrdinal("week_Type")))
                         {
-                            if ((bool)readerGroup["week_Type"])
-                            {
-                                week_Type = "Числитель";
-                            }
-                            else
-                            {
-                                week_Type = "Знаменатель";
-                            }
+                            // меняем значение переменной weekType каждую неделю
+                            week_Type = !(bool)readerGroup["week_Type"];
                         }
-                        else
-                        {
-                            week_Type = weekType;
-                        }
-                        // меняем значение переменной weekType каждую неделю
-                        week_Type = week_Type == "Числитель" ? "Знаменатель" : "Числитель";
                         if (!readerGroup.IsDBNull(readerGroup.GetOrdinal("week_Day_DZ")))
                         {
-                            if ((string)readerGroup["week_Day_DZ"] != "Monday")
-                            {
-                                week_Day_DZ = (string)readerGroup["week_Day_DZ"];
-                            }
+                            /* if ((string)readerGroup["week_Day_DZ"] != "Monday") //удаляем все дни т.к таймер запускается между субботой и воскресеньем в 00:00
+                             {*/
+                            week_Day_DZ = (string)readerGroup["week_Day_DZ"];
+                            //}
                         }
-                        updateGroup[countGroup] = new string[] { group_Name, week_Type, week_Day_DZ };
+                        updateGroup.Add(new object[] { group_Name, week_Type, week_Day_DZ });
                     }
                 }
+            }
+            await CheckUserValues(globalAdminId);
+            long valueUserId = globalUserId;
+            globalUserId = globalAdminId;
+            if (sqlConnection.State == ConnectionState.Closed)
+            {
+                await sqlConnection.OpenAsync();
             }
             foreach (var GroupMs in updateGroup)
             {
                 try
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
-                    if (GroupMs[2] == "") GroupMs[2] = "NULL";
-                    else
+                    if ((string)GroupMs[2] != null)
                     {
                         await sqlConnection.CloseAsync();
-                        await FullDeleteDz(GroupMs[0]);
+                        await FullDeleteDz((string)GroupMs[0]);
+                        Console.ForegroundColor = ConsoleColor.Green;
                         await sqlConnection.OpenAsync();
-                        Console.WriteLine($"[{DateTime.Now}] Произведена очистка дз группы {GroupMs[0]} для дня {GroupMs[2]}");
+                        Console.WriteLine($"[{DateTime.Now}] Произведена очистка дз группы {(string)GroupMs[0]} для дня {(string)GroupMs[2]}");
                     }
-                    using (SqlCommand commandUp = new("UPDATE Groups SET week_Type = @weekType, week_Day_DZ = @weekDayDZ WHERE group_Name = @groupName", sqlConnection))
+                    using (SqlCommand commandUp = new("UPDATE Groups SET week_Type = @weekType WHERE group_Name = @groupName", sqlConnection))
                     {
-                        commandUp.Parameters.AddWithValue("@groupName", GroupMs[0]);
-                        commandUp.Parameters.AddWithValue("@weekType", GroupMs[1]);
-                        commandUp.Parameters.AddWithValue("@weekDayDZ", GroupMs[2]);
+                        commandUp.Parameters.AddWithValue("@groupName", (string)GroupMs[0]);
+                        commandUp.Parameters.AddWithValue("@weekType", (bool)GroupMs[1]);
                         await commandUp.ExecuteNonQueryAsync();
                     }
-                    Console.WriteLine($"[{DateTime.Now}] Тип недели группы {GroupMs[0]} изменен, теперь тип недели: {GroupMs[1]}");
+                    Console.WriteLine($"[{DateTime.Now}] Тип недели группы {(string)GroupMs[0]} изменен, теперь тип недели: {((bool)GroupMs[1] ? "Числитель" : "Знаменатель")}");
                     Console.ResetColor();
                 }
                 catch
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"[{DateTime.Now}] НЕ удалось изменить тип недели {GroupMs[1]} группы {GroupMs[0]} или удалить дз для дня {GroupMs[2]} !");
+                    Console.WriteLine($"[{DateTime.Now}] НЕ удалось изменить тип недели {((bool)GroupMs[1] ? "Числитель" : "Знаменатель")} группы {GroupMs[0]} или удалить дз для дня {GroupMs[2]} !");
                     Console.ResetColor();
                 }
             }
             await sqlConnection.CloseAsync();
+            globalUserId = valueUserId;
 
             Console.ForegroundColor = ConsoleColor.Green;
             await UpdateIndexStatisticsAsync("Users");
@@ -456,7 +468,7 @@ internal class Program
         Console.ResetColor();
         #endregion
         #region Таймер pollBD
-        var pollBD = new System.Timers.Timer();
+        /*var pollBD = new System.Timers.Timer();*/
         pollBD.Elapsed += new ElapsedEventHandler(async (sender, eventArgs) =>
         {
             bool isRecentAppeal = false;// недавнее обращение
@@ -1010,6 +1022,7 @@ internal class Program
                     await sqlConnection.CloseAsync();
 
                     await botClient.SendTextMessageAsync(globalChatId, $"✅Теперь тип недели: *{weekType}*", parseMode: ParseMode.Markdown);
+                    await ReturnImageDz();
                     await DzBaseChat(globalUserValues[globalUserId].GroupName, true);
                 }
                 else
@@ -1894,11 +1907,13 @@ internal class Program
             #region Кнопка Редактировать ДЗ
             if (message.Text.Trim() == "✏️Редактировать ДЗ" || message.Text.Trim().ToLower() == "/fast_edit_dz")
             {
-                await botClient.SendChatActionAsync(globalChatId, ChatAction.Typing);
+                await botClient.SendChatActionAsync(globalChatId, ChatAction.Typing); 
 
                 globalUserValues[globalUserId].PressingButtons["addHomework"] = false;//для быстрого перехода от добавления до редактирования
-                if (await buttonTest())
+                if (globalUserValues[globalUserId].PressingButtons["changeHomework"] || globalUserValues[globalUserId].PressingButtons["changeLesson"] || await buttonTest())
                 {
+                    globalUserValues[globalUserId].PressingButtons["changeHomework"] = false;
+                    globalUserValues[globalUserId].PressingButtons["changeLesson"] = false;
                     if (!await ReturnGroupName())
                     {
                         return;
@@ -2313,12 +2328,12 @@ internal class Program
                                                             "_Название новости_ \\(_*длиной до 150 символов*_\\)\n" +
                                                             "' ' \\(_*Перенос строки \\- обязательный разделитель*_\\)\n" +
                                                             "_Текст новости_ \\(_*длиной до 500 символов*_\\)\n" +
-                                                            "\n\n" +
+                                                            "\n" +
                                                             "Т\\.е выглядеть будет так \\(пример\\):\n" +
                                                             "*11*\n" +
                                                             "*Название новости11*\n" +
-                                                            "*Текст новости номер11*" +
-                                                            "_*Если вы хотите изменить фото новости введите*_ /update_photo_news",
+                                                            "*Текст новости номер11*\n\n" +
+                                                            "_*Если вы хотите изменить фото новости введите*_ /update\\_photo\\_news",
                                                             replyMarkup: Keyboards.cancel, parseMode: ParseMode.MarkdownV2);
                         globalUserValues[globalUserId].PressingButtons["changeNews"] = true;
                     }
@@ -3049,7 +3064,8 @@ internal class Program
                     newsTitle = newsMs[1];
                     if (newsMs.Length > 3)
                     {
-                        for (int i = 3; i < newsMs.Length; i++)
+                        newsText = "";
+                        for (int i = 2; i < newsMs.Length; i++)
                         {
                             newsText += newsMs[i] + "\n";
                         }
@@ -3151,7 +3167,8 @@ internal class Program
                     newsTitle = newsMs[1];
                     if (newsMs.Length > 3)
                     {
-                        for (int i = 3; i < newsMs.Length; i++)
+                        newsText = "";
+                        for (int i = 2; i < newsMs.Length; i++)
                         {
                             newsText += newsMs[i] + "\n";
                         }
@@ -3277,6 +3294,7 @@ internal class Program
                 await clearingTables($"[{globalUserValues[globalUserId].GroupName}_Calls]");
                 sqlConnection.Close();
                 sqlConnection.Open();
+                string[] numSchedule = new string[] { "", "⒈ ", "⒉ ", "⒊ ", "⒋ ", "⒌ ", "⒍ ", "⒎ ", "⒏ " };
                 string[] timeMass;
                 int idCulls = 0;
                 string comment, Time;
@@ -3322,35 +3340,26 @@ internal class Program
                         {
                             Time = Time.Replace("-", "⌁");
                         }
-                        switch (idCulls)//просто для красивого оформления
+
+                        if (idCulls < 9)//просто для красивого оформления
                         {
-                            case 1:
+                            if (idCulls == 1)
+                            {
                                 Time = "⒈ " + Time + " ╕";
-                                break;
-                            case 2:
-                                Time = "⒉ " + Time + " │";
-                                break;
-                            case 3:
-                                Time = "⒊ " + Time + " │";
-                                break;
-                            case 4:
-                                Time = "⒋ " + Time + " │";
-                                break;
-                            case 5:
-                                Time = "⒌ " + Time + " │";
-                                break;
-                            case 6:
-                                Time = "⒍ " + Time + " │";
-                                break;
-                            case 7:
-                                Time = "⒎ " + Time + " │";
-                                break;
-                            case 8:
+                            }
+                            else if (idCulls == 8)
+                            {
                                 Time = "⒏ " + Time + " ╛";
-                                break;
-                            default:
-                                await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [1001]: Максимальное количество записей: 8", replyMarkup: Keyboards.cancel);
-                                return;
+                            }
+                            else
+                            {
+                                Time = numSchedule[idCulls] + Time + " │";
+                            }
+                        }
+                        else
+                        {
+                            await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [1001]: Максимальное количество записей: 8", replyMarkup: Keyboards.cancel);
+                            return;
                         }
                         if (i == timeMass.Length - 1 && idCulls != 8)//заменяем последнюю │ на ╛, если это конец строки и он не равен 8
                         {
@@ -3388,6 +3397,7 @@ internal class Program
                     return;
                 }
                 sqlConnection.Close();
+                string[] numSchedule = new string[] { "", "⒈ ", "⒉ ", "⒊ ", "⒋ ", "⒌ ", "⒍ ", "⒎ ", "⒏ " };
                 string[] scheduleMass;
                 int idSchedule = 0;
                 string schedule, audience, EnglishDay, lesson_name1 = "", lesson_name2 = "", audience1 = "", audience2 = "";
@@ -3466,51 +3476,16 @@ internal class Program
                         return;
                     }
 
-                    switch (idSchedule)//просто для красивого оформления
+                    if (idSchedule < 9)//просто для красивого оформления
                     {
-                        case 1:
-                            schedule = "⒈ " + schedule;
-                            lesson_name1 = "⒈ " + lesson_name1;
-                            lesson_name2 = "⒈ " + lesson_name2;
-                            break;
-                        case 2:
-                            schedule = "⒉ " + schedule;
-                            lesson_name1 = "⒉ " + lesson_name1;
-                            lesson_name2 = "⒉ " + lesson_name2;
-                            break;
-                        case 3:
-                            schedule = "⒊ " + schedule;
-                            lesson_name1 = "⒊ " + lesson_name1;
-                            lesson_name2 = "⒊ " + lesson_name2;
-                            break;
-                        case 4:
-                            schedule = "⒋ " + schedule;
-                            lesson_name1 = "⒋ " + lesson_name1;
-                            lesson_name2 = "⒋ " + lesson_name2;
-                            break;
-                        case 5:
-                            schedule = "⒌ " + schedule;
-                            lesson_name1 = "⒌ " + lesson_name1;
-                            lesson_name2 = "⒌ " + lesson_name2;
-                            break;
-                        case 6:
-                            schedule = "⒍ " + schedule;
-                            lesson_name1 = "⒍ " + lesson_name1;
-                            lesson_name2 = "⒍ " + lesson_name2;
-                            break;
-                        case 7:
-                            schedule = "⒎ " + schedule;
-                            lesson_name1 = "⒎ " + lesson_name1;
-                            lesson_name2 = "⒎ " + lesson_name2;
-                            break;
-                        case 8:
-                            schedule = "⒏ " + schedule;
-                            lesson_name1 = "⒏ " + lesson_name1;
-                            lesson_name2 = "⒏ " + lesson_name2;
-                            break;
-                        default:
-                            await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [1001]: Максимальное количество записей: 8", replyMarkup: Keyboards.cancel);
-                            return;
+                        schedule = numSchedule[idSchedule] + schedule;
+                        lesson_name1 = numSchedule[idSchedule] + lesson_name1;
+                        lesson_name2 = numSchedule[idSchedule] + lesson_name2;
+                    }
+                    else
+                    {
+                        await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [1001]: Максимальное количество записей: 8", replyMarkup: Keyboards.cancel);
+                        return;
                     }
 
                     SqlCommand insertCommand = new($"INSERT into [{globalUserValues[globalUserId].GroupName}_{EnglishDay}_Schedule](lesson_name, audience_code) values (@lesson_name, @audience_code)", sqlConnection);
@@ -3737,6 +3712,7 @@ internal class Program
                     return;
                 }
                 string id, Text;
+                string[] numSchedule = new string[] { "", "⒈ ", "⒉ ", "⒊ ", "⒋ ", "⒌ ", "⒍ ", "⒎ ", "⒏ " };
                 if (await ReturnDayWeek(true))
                 {
                     await botClient.SendTextMessageAsync(globalChatId, $"❌Ошибка [1003]: Невозможно получить английское название дня недели для русского дня", replyMarkup: Keyboards.cancel);
@@ -3769,6 +3745,10 @@ internal class Program
                     if (await dataAvailability(idHomework, "Homework", groupName: globalUserValues[globalUserId].GroupName))
                     {
                         string valueEdit = globalUserValues[globalUserId].PressingButtons["changeHomework"] ? "homework" : "lesson_name";
+                        if (valueEdit == "lesson_name")
+                        {
+                            Text = numSchedule[idHomework] + Text;
+                        }
                         sqlConnection.Open();
                         SqlCommand updateCommand = new($"UPDATE [{globalUserValues[globalUserId].GroupName}_Homework] SET [{valueEdit}] = @valueEdit WHERE id_Homework = @idHomework", sqlConnection);
                         updateCommand.Parameters.AddWithValue("@idHomework", idHomework);
@@ -5803,6 +5783,7 @@ internal class Program
             // Создаем объект состояния таймера
             timerState = new TimerState
             {
+                Timers = new List<System.Timers.Timer> { pollBD, timerWeekType, timerDz },
                 BotClient = botClient,
                 ChatId = globalChatId,
                 AdminId = globalAdminId,
@@ -6258,7 +6239,6 @@ internal class Program
             }
             sqlConnection.Close();
 
-
             if (idMessage != 0 || timeMessage != DateTime.MinValue)// Проверка, что значение не равно DateTime.MinValue
             {
                 // Вычисление времени на следующий день и 10:00
@@ -6283,7 +6263,6 @@ internal class Program
                 globalUserValues[globalUserId].MessageEditId = 0;
                 ErrorMessageID = "Ошибка 0";
             }
-
 
             if (globalUserValues[globalUserId].MessageEditId == 0)
             {
@@ -6477,7 +6456,7 @@ internal class Program
             // Создадим объект InlineKeyboardMarkup с использованием списков названий групп и инлайн кнопок
             InlineKeyboardMarkup inlineKeyboardMarkup = new(inlineButtonRows.ToArray());
 
-            await botClient.SendTextMessageAsync(globalChatId, "*❕Выберите свою группу 👥:", parseMode: ParseMode.MarkdownV2, replyMarkup: inlineKeyboardMarkup);
+            await botClient.SendTextMessageAsync(globalChatId, "*❕Выберите свою группу 👥:*", parseMode: ParseMode.MarkdownV2, replyMarkup: inlineKeyboardMarkup);
         }
 
         async Task NoDz(string valueNoDz)
@@ -6953,6 +6932,7 @@ internal class Program
 
             RestartBot restartBot = new()
             {
+                Timers = new List<System.Timers.Timer> { pollBD, timerWeekType, timerDz },
                 AdminId = globalAdminId,
                 UserId = globalChatId,
                 BotClient = botClient

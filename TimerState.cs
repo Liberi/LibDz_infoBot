@@ -15,7 +15,7 @@ namespace LibDz_infoBot
 {
     internal class TimerState
     {
-        int a;
+        public List<System.Timers.Timer> Timers {  get; set; }
         public SqlConnection SqlConnection { get; set; } 
         public SpamDetector SpamDetector { get; set; }
         public TelegramBotClient BotClient { get; set; }
@@ -81,6 +81,7 @@ namespace LibDz_infoBot
             {
                 RestartBot restartBot = new()
                 {
+                    Timers = Timers,
                     AdminId = AdminId,
                     UserId = ChatId,
                     BotClient = BotClient

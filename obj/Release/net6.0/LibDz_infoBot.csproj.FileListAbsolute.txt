@@ -38,7 +38,7 @@ C:\Users\7102a\source\repos\LibDz_infoBot\obj\Release\net6.0\LibDz_infoBot.Gener
 C:\Users\7102a\source\repos\LibDz_infoBot\obj\Release\net6.0\LibDz_infoBot.AssemblyInfoInputs.cache
 C:\Users\7102a\source\repos\LibDz_infoBot\obj\Release\net6.0\LibDz_infoBot.AssemblyInfo.cs
 C:\Users\7102a\source\repos\LibDz_infoBot\obj\Release\net6.0\LibDz_infoBot.csproj.CoreCompileInputs.cache
-C:\Users\7102a\source\repos\LibDz_infoBot\obj\Release\net6.0\LibDz_infoBot.csproj.CopyComplete
+C:\Users\7102a\source\repos\LibDz_infoBot\obj\Release\net6.0\LibDz_in.6812ABD5.Up2Date
 C:\Users\7102a\source\repos\LibDz_infoBot\obj\Release\net6.0\LibDz_infoBot.dll
 C:\Users\7102a\source\repos\LibDz_infoBot\obj\Release\net6.0\refint\LibDz_infoBot.dll
 C:\Users\7102a\source\repos\LibDz_infoBot\obj\Release\net6.0\LibDz_infoBot.pdb

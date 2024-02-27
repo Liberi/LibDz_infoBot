@@ -12,6 +12,7 @@ namespace LibDz_infoBot
 {
     internal class RestartBot
     {
+        public List<System.Timers.Timer> Timers;
         public ITelegramBotClient BotClient;
         public long AdminId;
         public long UserId;
@@ -27,6 +28,11 @@ namespace LibDz_infoBot
                 catch { }
             }
             Console.ForegroundColor = ConsoleColor.DarkYellow;
+            foreach (System.Timers.Timer timers in Timers)
+            {
+                timers.Stop();
+                Console.WriteLine($"[{DateTime.Now}] Таймер остановлен!");
+            }
             Console.WriteLine($"[{DateTime.Now}] Предпринята попытка перезапуска Бота! Причина: {Message}, с ошибкой {ErrorMessage}");
             Console.ResetColor();
             // Запускаем новое приложение
