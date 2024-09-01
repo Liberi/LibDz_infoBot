@@ -1,32 +1,32 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\7102a\\source\\repos\\LibDz_infoBot\\LibDz_infoBot.csproj": {}
+    "C:\\Users\\Lib_int\\source\\repos\\LibDz_infoBot\\LibDz_infoBot.csproj": {}
   },
   "projects": {
-    "C:\\Users\\7102a\\source\\repos\\LibDz_infoBot\\LibDz_infoBot.csproj": {
+    "C:\\Users\\Lib_int\\source\\repos\\LibDz_infoBot\\LibDz_infoBot.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\7102a\\source\\repos\\LibDz_infoBot\\LibDz_infoBot.csproj",
+        "projectUniqueName": "C:\\Users\\Lib_int\\source\\repos\\LibDz_infoBot\\LibDz_infoBot.csproj",
         "projectName": "LibDz_infoBot",
-        "projectPath": "C:\\Users\\7102a\\source\\repos\\LibDz_infoBot\\LibDz_infoBot.csproj",
-        "packagesPath": "C:\\Users\\7102a\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\7102a\\source\\repos\\LibDz_infoBot\\obj\\",
+        "projectPath": "C:\\Users\\Lib_int\\source\\repos\\LibDz_infoBot\\LibDz_infoBot.csproj",
+        "packagesPath": "C:\\Users\\Lib_int\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Lib_int\\source\\repos\\LibDz_infoBot\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\7102a\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Lib_int\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
-          "net6.0"
+          "net7.0"
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net6.0": {
-            "targetAlias": "net6.0",
+          "net7.0": {
+            "targetAlias": "net7.0",
             "projectReferences": {}
           }
         },
@@ -42,8 +42,8 @@
         }
       },
       "frameworks": {
-        "net6.0": {
-          "targetAlias": "net6.0",
+        "net7.0": {
+          "targetAlias": "net7.0",
           "dependencies": {
             "EPPlus": {
               "target": "Package",
@@ -78,7 +78,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.200\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.303\\RuntimeIdentifierGraph.json"
         }
       }
     }

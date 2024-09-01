@@ -136,6 +136,9 @@ namespace LibDz_infoBot
             new []
             {
                 InlineKeyboardButton.WithUrl("👨‍💻Разработчик бота", "https://t.me/Lib_int"),
+            },
+            new []
+            {
                 InlineKeyboardButton.WithUrl("👤Главный администратор", "https://t.me/Lib_int"),
             },
         });
