@@ -10,7 +10,7 @@ namespace LibDz_infoBot
         public DateTime StartTime;
         private Dictionary<long, List<DateTime>> userMessages;
         int a;
-        public SpamDetector() 
+        public SpamDetector()
         {
             userMessages = new Dictionary<long, List<DateTime>>();
         }
@@ -44,34 +44,39 @@ namespace LibDz_infoBot
 
         async public Task<bool> IsUserBlockedAsync(long userId)
         {
-            sqlConnection.Close();
             bool result = false;//проверка на блокировку
             try
             {
+                if (sqlConnection.State == ConnectionState.Open)
+                {
+                    await sqlConnection.CloseAsync();
+                }
+
                 await sqlConnection.OpenAsync();
 
-                string query = @"IF EXISTS (SELECT * FROM Users WHERE user_id = @UserId AND is_blocked = 1)
-                                SELECT 'true'
-                            ELSE
-                                SELECT 'false'"
+                string query = @"SELECT CAST(
+                                    CASE
+                                        WHEN EXISTS (SELECT 1 FROM Users WHERE user_id = @UserId AND is_blocked = 1)
+                                        THEN 1
+                                        ELSE 0
+                                    END AS BIT)"
                 ;
 
                 using SqlCommand command = new(query, sqlConnection);
                 command.Parameters.AddWithValue("@UserId", userId);
                 object queryResult = await command.ExecuteScalarAsync();
 
-                if (queryResult != null && queryResult != DBNull.Value)//берем результат из бд
+                if (queryResult != null && queryResult != DBNull.Value)
                 {
-                    result = Convert.ToBoolean(queryResult);
+                    result = (bool)queryResult;
                 }
             }
-            finally//в любом случае закрываем соединение с бд
+            finally
             {
                 if (sqlConnection.State == ConnectionState.Open)
                 {
                     await sqlConnection.CloseAsync();
                 }
-                //sqlConnection.Dispose();
             }
 
             return result;
